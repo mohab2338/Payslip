@@ -4,12 +4,25 @@ import '../theme.dart';
 class SpendRing extends StatelessWidget {
   final double percentage; // 0-100+
   final double size;
+  /// When true, renders with light colors suited to sitting on the dark
+  /// purple hero tile (used on the home screen) instead of on a plain
+  /// light background.
+  final bool onDark;
 
-  const SpendRing({super.key, required this.percentage, this.size = 160});
+  const SpendRing({
+    super.key,
+    required this.percentage,
+    this.size = 160,
+    this.onDark = false,
+  });
 
-  Color get _color {
+  Color get _trackColor => onDark ? AppColors.primaryDark : AppColors.divider;
+  Color get _progressColor => onDark ? AppColors.primaryLight : _lightModeColor;
+  Color get _textColor => onDark ? Colors.white : AppColors.textPrimary;
+
+  Color get _lightModeColor {
     if (percentage >= 100) return AppColors.danger;
-    if (percentage >= 75) return const Color(0xFFFFA94D);
+    if (percentage >= 75) return const Color(0xFFBA7517);
     return AppColors.accent;
   }
 
@@ -27,28 +40,19 @@ class SpendRing extends StatelessWidget {
             height: size,
             child: CircularProgressIndicator(
               value: clamped.toDouble(),
-              strokeWidth: 12,
-              backgroundColor: AppColors.divider,
-              valueColor: AlwaysStoppedAnimation<Color>(_color),
+              strokeWidth: size * 0.075,
+              backgroundColor: _trackColor,
+              valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
               strokeCap: StrokeCap.round,
             ),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${percentage.toStringAsFixed(0)}%',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const Text(
-                'spent',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-              ),
-            ],
+          Text(
+            '${percentage.toStringAsFixed(0)}%',
+            style: TextStyle(
+              fontSize: size * 0.19,
+              fontWeight: FontWeight.w700,
+              color: _textColor,
+            ),
           ),
         ],
       ),

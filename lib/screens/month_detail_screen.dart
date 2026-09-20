@@ -56,43 +56,73 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
           children: [
-            Center(child: SpendRing(percentage: month.spentPercentage)),
-            const SizedBox(height: 24),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              childAspectRatio: 1.25,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  SpendRing(percentage: month.spentPercentage, size: 84, onDark: true),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Allowed to spend',
+                          style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _currency.format(month.allowedToSpend),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'total spent',
+                          style: TextStyle(color: AppColors.primaryLight, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                StatCard(
-                  label: 'Salary',
-                  value: _currency.format(month.salary),
-                  icon: Icons.payments_outlined,
+                Expanded(
+                  child: StatCard(
+                    label: 'Salary',
+                    value: _currency.format(month.salary),
+                    fillColor: AppColors.accent,
+                  ),
                 ),
-                StatCard(
-                  label: 'Saving goal',
-                  value: _currency.format(month.savingGoal),
-                  icon: Icons.flag_outlined,
-                ),
-                StatCard(
-                  label: 'Allowed to spend',
-                  value: _currency.format(month.allowedToSpend),
-                  icon: Icons.wallet_outlined,
-                ),
-                StatCard(
-                  label: 'Total spent',
-                  value: _currency.format(month.totalSpent),
-                  icon: Icons.trending_down_outlined,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: StatCard(
+                    label: 'Saved',
+                    value: _currency.format(month.savingGoal),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 28),
-            const Text('Purchases', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            StatCard(
+              label: 'Total spent',
+              value: _currency.format(month.totalSpent),
+              row: true,
+            ),
+            const SizedBox(height: 24),
+            const Text('Purchases', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
             if (month.items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
@@ -101,10 +131,10 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
             else
               ...month.items.map((item) => Container(
                     margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     child: Row(
                       children: [
@@ -112,7 +142,8 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 2),
                               Text(
                                 DateFormat.yMMMd().add_jm().format(item.date),
                                 style: const TextStyle(
@@ -122,7 +153,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                           ),
                         ),
                         Text(_currency.format(item.amount),
-                            style: const TextStyle(fontWeight: FontWeight.w700)),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                       ],
                     ),
                   )),
