@@ -95,24 +95,26 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: StatCard(
-                    label: 'Salary',
-                    value: _currency.format(month.salary),
-                    fillColor: AppColors.accent,
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: StatCard(
+                      label: 'Salary',
+                      value: _currency.format(month.salary),
+                      fillColor: AppColors.accent,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: StatCard(
-                    label: 'Saved',
-                    value: _currency.format(month.savingGoal),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: StatCard(
+                      label: 'Saved',
+                      value: _currency.format(month.savingGoal),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             StatCard(
