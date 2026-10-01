@@ -14,7 +14,7 @@ import 'settings_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  static final _currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+  static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
 
   @override
   Widget build(BuildContext context) {

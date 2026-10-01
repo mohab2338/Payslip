@@ -53,7 +53,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
                     labelText: 'Monthly salary',
-                    prefixIcon: Icon(Icons.attach_money),
+                    prefixText: 'E£ ',
                   ),
                   validator: _numberValidator,
                 ),

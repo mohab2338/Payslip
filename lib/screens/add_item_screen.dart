@@ -51,7 +51,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
                     labelText: 'Amount',
-                    prefixIcon: Icon(Icons.attach_money),
+                    prefixText: 'E£ ',
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Required';

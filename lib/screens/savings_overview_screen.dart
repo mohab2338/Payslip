@@ -11,7 +11,7 @@ import '../widgets/stat_card.dart';
 class SavingsOverviewScreen extends StatelessWidget {
   const SavingsOverviewScreen({super.key});
 
-  static final _currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+  static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
 
   Future<void> _addExternalSaving(BuildContext context) async {
     final titleCtrl = TextEditingController();

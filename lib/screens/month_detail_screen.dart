@@ -15,7 +15,7 @@ class MonthDetailScreen extends StatefulWidget {
 }
 
 class _MonthDetailScreenState extends State<MonthDetailScreen> {
-  static final _currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+  static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
   final _exportService = ExportService();
   bool _exporting = false;
 
