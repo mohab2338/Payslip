@@ -277,13 +277,10 @@ class GoalsScreen extends StatelessWidget {
         builder: (dialogContext) => AlertDialog(
           icon: const Icon(Icons.celebration_outlined, color: AppColors.accent, size: 42),
           title: const Text('مبروك!'),
-          content: const Directionality(
-            textDirection: TextDirection.rtl,
-            child: Text(
-              'نفعكم الله بها و بارك لكم في بيتكم ❤️',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, height: 1.7),
-            ),
+          content: const Text(
+            'نفعكم الله بها و بارك لكم في بيتكم ❤️',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 20, height: 1.7),
           ),
           actions: [
             Center(
