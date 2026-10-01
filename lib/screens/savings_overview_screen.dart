@@ -90,8 +90,14 @@ class SavingsOverviewScreen extends StatelessWidget {
               return const Center(child: CircularProgressIndicator());
             }
             final months = monthsSnap.data!;
-            final totalFromCycles =
-                months.fold(0.0, (sum, m) => sum + m.savingGoal);
+            // Overspending in a cycle comes out of what would have been
+            // saved, so each cycle's real contribution to savings is its
+            // goal minus however much it went over the allowed spend —
+            // not just the raw saving goal.
+            double excessFor(MonthData m) =>
+                m.totalSpent > m.allowedToSpend ? m.totalSpent - m.allowedToSpend : 0.0;
+            double netSavedFor(MonthData m) => m.savingGoal - excessFor(m);
+            final totalFromCycles = months.fold(0.0, (sum, m) => sum + netSavedFor(m));
 
             return StreamBuilder<List<ExternalSaving>>(
               stream: state.watchExternalSavings(),
@@ -165,8 +171,8 @@ class SavingsOverviewScreen extends StatelessWidget {
                       )
                     else
                       ...months.map((m) {
-                        final excess =
-                            m.totalSpent > m.allowedToSpend ? m.totalSpent - m.allowedToSpend : 0.0;
+                        final excess = excessFor(m);
+                        final netSaved = netSavedFor(m);
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(14),
@@ -185,7 +191,7 @@ class SavingsOverviewScreen extends StatelessWidget {
                               Row(
                                 children: [
                                   Expanded(
-                                    child: _MiniStat(label: 'Saved', value: _currency.format(m.savingGoal)),
+                                    child: _MiniStat(label: 'Saving goal', value: _currency.format(m.savingGoal)),
                                   ),
                                   Expanded(
                                     child: _MiniStat(label: 'Spent', value: _currency.format(m.totalSpent)),
@@ -199,6 +205,26 @@ class SavingsOverviewScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
+                              if (excess > 0) ...[
+                                const SizedBox(height: 10),
+                                Container(height: 1, color: AppColors.divider),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Net saved this cycle',
+                                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    Text(
+                                      _currency.format(netSaved),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: netSaved < 0 ? AppColors.danger : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         );
