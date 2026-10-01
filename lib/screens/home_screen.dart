@@ -10,6 +10,7 @@ import 'add_item_screen.dart';
 import 'history_screen.dart';
 import 'savings_overview_screen.dart';
 import 'settings_screen.dart';
+import 'notes_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -29,6 +30,14 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Salary tracker'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sticky_note_2_outlined),
+            tooltip: 'Notes',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotesScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.account_balance_outlined),
             tooltip: 'Savings overview',
@@ -196,12 +205,46 @@ class HomeScreen extends StatelessWidget {
                                     style: const TextStyle(
                                         fontSize: 12, color: AppColors.textSecondary),
                                   ),
+                                  if (item.note.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.note,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 12, color: AppColors.textSecondary),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
                             Text(
                               _currency.format(item.amount),
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                            ),
+                            IconButton(
+                              tooltip: 'Edit purchase',
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.edit_outlined, size: 19),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => AddItemScreen(item: item)),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: item.note.isEmpty ? 'Add note' : 'Edit note',
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.note_add_outlined, size: 19),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AddItemScreen(item: item, noteOnly: true),
+                                ),
+                              ),
                             ),
                           ],
                         ),

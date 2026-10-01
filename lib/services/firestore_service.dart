@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/month_data.dart';
 import '../models/expense_item.dart';
 import '../models/external_saving.dart';
+import '../models/note_item.dart';
 
 /// All Firestore reads/writes live here.
 ///
@@ -20,6 +21,9 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> _externalSavingsCol(String uid) =>
       _userDoc(uid).collection('external_savings');
+
+    CollectionReference<Map<String, dynamic>> _notesCol(String uid) =>
+      _userDoc(uid).collection('notes');
 
   // ---------- user settings ----------
 
@@ -75,8 +79,32 @@ class FirestoreService {
   }
 
   Future<void> removeItem(String uid, String monthId, ExpenseItem item) async {
-    await _monthsCol(uid).doc(monthId).update({
-      'items': FieldValue.arrayRemove([item.toMap()]),
+    final monthRef = _monthsCol(uid).doc(monthId);
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(monthRef);
+      final data = snapshot.data();
+      if (data == null) return;
+      final items = List<Map<String, dynamic>>.from(
+        (data['items'] as List<dynamic>? ?? []).map((value) => Map<String, dynamic>.from(value as Map)),
+      );
+      items.removeWhere((value) => value['id'] == item.id);
+      transaction.update(monthRef, {'items': items});
+    });
+  }
+
+  Future<void> updateItem(String uid, String monthId, ExpenseItem item) async {
+    final monthRef = _monthsCol(uid).doc(monthId);
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(monthRef);
+      final data = snapshot.data();
+      if (data == null) return;
+      final items = List<Map<String, dynamic>>.from(
+        (data['items'] as List<dynamic>? ?? []).map((value) => Map<String, dynamic>.from(value as Map)),
+      );
+      final index = items.indexWhere((value) => value['id'] == item.id);
+      if (index < 0) return;
+      items[index] = item.toMap();
+      transaction.update(monthRef, {'items': items});
     });
   }
 
@@ -93,5 +121,21 @@ class FirestoreService {
   Stream<List<ExternalSaving>> watchExternalSavings(String uid) {
     return _externalSavingsCol(uid).orderBy('date', descending: true).snapshots().map(
         (snap) => snap.docs.map((d) => ExternalSaving.fromMap(d.data())).toList());
+  }
+
+  Future<void> saveNote(String uid, NoteItem note) async {
+    await _notesCol(uid).doc(note.id).set(note.toMap());
+  }
+
+  Future<void> removeNote(String uid, String noteId) async {
+    await _notesCol(uid).doc(noteId).delete();
+  }
+
+  Stream<List<NoteItem>> watchNotes(String uid) {
+    return _notesCol(uid).snapshots().map((snap) {
+      final notes = snap.docs.map((doc) => NoteItem.fromMap(doc.data())).toList();
+      notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      return notes;
+    });
   }
 }

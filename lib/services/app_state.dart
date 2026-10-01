@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/month_data.dart';
 import '../models/expense_item.dart';
 import '../models/external_saving.dart';
+import '../models/note_item.dart';
 import 'firestore_service.dart';
 import 'cycle_calculator.dart';
 
@@ -94,13 +95,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addExpenseItem(String title, double amount) async {
+  Future<void> addExpenseItem(String title, double amount, {String note = ''}) async {
     if (currentMonth == null) return;
     final item = ExpenseItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       title: title,
       amount: amount,
       date: DateTime.now(),
+      note: note,
     );
     await _firestore.addItem(_uid, currentMonth!.id, item);
     currentMonth!.items.add(item);
@@ -111,6 +113,14 @@ class AppState extends ChangeNotifier {
     if (currentMonth == null) return;
     await _firestore.removeItem(_uid, currentMonth!.id, item);
     currentMonth!.items.removeWhere((e) => e.id == item.id);
+    notifyListeners();
+  }
+
+  Future<void> updateExpenseItem(ExpenseItem item) async {
+    if (currentMonth == null) return;
+    await _firestore.updateItem(_uid, currentMonth!.id, item);
+    final index = currentMonth!.items.indexWhere((existing) => existing.id == item.id);
+    if (index >= 0) currentMonth!.items[index] = item;
     notifyListeners();
   }
 
@@ -132,6 +142,16 @@ class AppState extends ChangeNotifier {
 
   Future<void> removeExternalSaving(ExternalSaving item) async {
     await _firestore.removeExternalSaving(_uid, item.id);
+  }
+
+  Stream<List<NoteItem>> watchNotes() => _firestore.watchNotes(_uid);
+
+  Future<void> saveNote(NoteItem note) async {
+    await _firestore.saveNote(_uid, note);
+  }
+
+  Future<void> removeNote(String noteId) async {
+    await _firestore.removeNote(_uid, noteId);
   }
 
   Future<void> updateMonthStartDay(int newStartDay) async {

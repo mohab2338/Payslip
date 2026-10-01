@@ -93,6 +93,10 @@ does the actual building for you.
          match /external_savings/{itemId} {
            allow read, write: if request.auth != null && request.auth.uid == userId;
          }
+
+             match /notes/{noteId} {
+                allow read, write: if request.auth != null && request.auth.uid == userId;
+             }
        }
      }
    }
@@ -101,11 +105,11 @@ does the actual building for you.
 
    > **If you set up this project before the "Savings overview" page
    > existed:** your Firestore rules are missing the `external_savings`
-   > block above. Go back to **Firestore Database → Rules**, replace what's
-   > there with the full snippet above (it's safe to paste over — it still
-   > includes the original `months` rule unchanged), and click **Publish**
-   > again. Without this, adding an external saving will fail with a
-   > "permission denied" error.
+   > and `notes` blocks above. Go back to **Firestore Database → Rules**,
+   > replace what's there with the full snippet above (it's safe to paste
+   > over — it includes the original `months` rule unchanged), and click
+   > **Publish** again. Without these rules, savings or notes may fail with
+   > a "permission denied" error.
 
 ---
 
