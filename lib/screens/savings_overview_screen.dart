@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/month_data.dart';
 import '../models/external_saving.dart';
+import '../models/saving_goal.dart';
 import '../services/app_state.dart';
 import '../theme.dart';
 import '../widgets/confirm_dialog.dart';
@@ -109,14 +110,29 @@ class SavingsOverviewScreen extends StatelessWidget {
                   stream: state.watchTotalGoalWithdrawals(),
                   builder: (context, withdrawalsSnap) {
                     final totalGoalWithdrawals = withdrawalsSnap.data ?? 0;
-                    final grandTotal = (totalFromCycles + totalExternal - totalGoalWithdrawals)
+                  return StreamBuilder<List<SavingGoal>>(
+                    stream: state.watchSavingGoals(),
+                    builder: (context, goalsSnap) {
+                    final goals = goalsSnap.data ?? [];
+                    final pendingGoalBalance = goals
+                      .where((goal) => goal.status == SavingGoalStatus.pending)
+                      .fold(0.0, (sum, goal) => sum + goal.savedAmount);
+                    final achievedGoalSpending =
+                      (totalGoalWithdrawals - pendingGoalBalance)
                         .clamp(0, double.infinity)
                         .toDouble();
+                    final sourceTotal = totalFromCycles + totalExternal;
+                    final totalSaved = (sourceTotal - achievedGoalSpending)
+                      .clamp(0, double.infinity)
+                      .toDouble();
+                    final currentSaved = (totalSaved - pendingGoalBalance)
+                      .clamp(0, double.infinity)
+                      .toDouble();
 
                     return ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                   children: [
-                    // Hero: grand total saved, across everything.
+                    // Total saved stays inclusive of pending goal balances.
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -128,15 +144,52 @@ class SavingsOverviewScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Total saved (all sources)',
+                            'Total saved',
                             style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _currency.format(grandTotal),
+                            _currency.format(totalSaved),
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700),
                           ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Current saved (after pending goals)',
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _currency.format(currentSaved),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (pendingGoalBalance > 0) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              '${_currency.format(pendingGoalBalance)} currently assigned to pending goals',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -163,7 +216,7 @@ class SavingsOverviewScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (totalGoalWithdrawals > 0) ...[
+                    if (achievedGoalSpending > 0) ...[
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -176,13 +229,13 @@ class SavingsOverviewScreen extends StatelessWidget {
                           children: [
                             const Expanded(
                               child: Text(
-                                'In goals or spent on achieved goals',
+                                'Spent on achieved goals',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '−${_currency.format(totalGoalWithdrawals)}',
+                              '−${_currency.format(achievedGoalSpending)}',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -333,6 +386,8 @@ class SavingsOverviewScreen extends StatelessWidget {
                           )),
                   ],
                 );
+                      },
+                    );
                   },
                 );
               },
