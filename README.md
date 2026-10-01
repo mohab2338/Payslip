@@ -376,7 +376,68 @@ in the workflow run's "deploy" job output.)
 
 ---
 
+## 10. Push updates straight to your phone (no manual APK download)
 
+Android won't let a sideloaded app silently update itself — that's an OS
+security restriction, not something we can script around. But **Firebase
+App Distribution** gets you the next best thing: every time a build
+succeeds, your phone gets a push notification, and updating is one tap
+inside an app (no more visiting the GitHub Actions tab). This is a one-time
+setup.
+
+### 10a. Turn on App Distribution
+
+1. Firebase console → left sidebar → **Release & Monitor → App
+   Distribution** → **Get started**.
+
+### 10b. Create a tester group
+
+1. In App Distribution, go to the **Testers & Groups** tab.
+2. Click **Add group**, name it exactly `testers` (the workflow already
+   expects this name) → **Save**.
+3. Click into that group → **Add testers** → type the email address(es) of
+   whoever should get the Android builds → **Save**.
+
+### 10c. Create a service account key (console only, no CLI)
+
+1. Firebase console → gear icon → **Project settings** → **Service
+   accounts** tab.
+2. Click **Generate new private key** → **Generate key**. A `.json` file
+   downloads.
+3. Open that file in any text editor and copy its entire contents.
+4. GitHub repo → **Settings → Secrets and variables → Actions → New
+   repository secret**:
+   - Name: `FIREBASE_SERVICE_ACCOUNT_JSON`
+   - Value: paste the entire JSON file content you copied
+
+That's the whole setup. The Android workflow already has the upload step
+built in — it's skipped automatically (with no error) until this secret
+exists, so nothing breaks in the meantime.
+
+### 10d. Installing it on your phone (first time only)
+
+1. Push to `main` (or re-run the workflow) so a build goes through
+   App Distribution at least once.
+2. The tester email you added gets an invite email from Firebase — open it
+   on the Android phone and follow the link, **or** find the direct link in
+   Firebase console → App Distribution → the release → **Testers** tab.
+3. It'll prompt you to install **Firebase App Tester** from the Play Store
+   (this one app *is* a legitimate Play Store app — it's just the delivery
+   mechanism for your own private builds, not itself going through app
+   review).
+4. Sign in, and you'll see "Salary Tracker" listed → **Install**.
+
+From then on, every successful build sends a notification through that app,
+and tapping it is a one-step update — no browser, no Actions tab, no manual
+APK file.
+
+> This only covers the **Android** app. The iPhone web version already
+> updates itself automatically on every page load/refresh, since it's just
+> a website — nothing to set up there.
+
+---
+
+## Troubleshooting
 
 - **Actions run fails at "Fail early with a clear message..."** — you
   missed step 3b or 3a: `firebase_options.dart` still has placeholder

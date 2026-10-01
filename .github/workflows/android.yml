@@ -137,6 +137,27 @@ jobs:
       - name: Build release APK (unsigned / debug-signed)
         run: flutter build apk --release
 
+      # Pushes the new build straight to your phone via the Firebase App
+      # Tester app (push notification + one-tap install), so you don't have
+      # to come back to the Actions tab and manually download an APK every
+      # time. Skipped automatically if FIREBASE_SERVICE_ACCOUNT_JSON isn't
+      # set - see README.md "Push updates straight to your phone" section.
+      - name: Get Firebase Android app id from google-services.json
+        id: firebase_app_id
+        run: |
+          APP_ID=$(python3 -c "import json; print(json.load(open('android/app/google-services.json'))['client'][0]['client_info']['mobilesdk_app_id'])")
+          echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release APK to Firebase App Distribution
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' }}
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ steps.firebase_app_id.outputs.app_id }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          groups: testers
+          file: build/app/outputs/flutter-apk/app-release.apk
+          releaseNotes: "Automatic build from ${{ github.sha }}"
+
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
