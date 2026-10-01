@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -274,23 +276,7 @@ class GoalsScreen extends StatelessWidget {
       if (!context.mounted) return;
       await showDialog<void>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          icon: const Icon(Icons.celebration_outlined, color: AppColors.accent, size: 42),
-          title: const Text('مبروك!'),
-          content: const Text(
-            'نفعكم الله بها و بارك لكم في بيتكم ❤️',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, height: 1.7),
-          ),
-          actions: [
-            Center(
-              child: TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('آمين'),
-              ),
-            ),
-          ],
-        ),
+        builder: (_) => const _GoalCelebrationDialog(),
       );
     }
   }
@@ -411,6 +397,155 @@ class GoalsScreen extends StatelessWidget {
       },
     );
   }
+}
+
+class _GoalCelebrationDialog extends StatefulWidget {
+  const _GoalCelebrationDialog();
+
+  @override
+  State<_GoalCelebrationDialog> createState() => _GoalCelebrationDialogState();
+}
+
+class _GoalCelebrationDialogState extends State<_GoalCelebrationDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _petalAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _petalAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _petalAnimation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+      child: SizedBox(
+        width: 360,
+        height: 310,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _CherryBlossomPainter(_petalAnimation),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 38, 24, 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.celebration_outlined,
+                      color: AppColors.accent, size: 42),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'مبروك!',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'نفعكم الله بها و بارك لكم في بيتكم ❤️',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, height: 1.7),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('آمين'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CherryBlossomPainter extends CustomPainter {
+  _CherryBlossomPainter(this.animation) : super(repaint: animation);
+
+  final Animation<double> animation;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final blossomPaint = Paint()..color = const Color(0x66F48FB1);
+    final centerPaint = Paint()..color = const Color(0x99F3B64A);
+    final petalColors = [
+      const Color(0x99F48FB1),
+      const Color(0x88EC709B),
+      const Color(0xAAFFD2E0),
+    ];
+
+    // Soft blossom clusters in the dialog corners.
+    _drawBlossom(canvas, Offset(24, 28), 13, blossomPaint, centerPaint);
+    _drawBlossom(canvas, Offset(size.width - 24, 34), 11, blossomPaint, centerPaint);
+    _drawBlossom(canvas, Offset(30, size.height - 22), 10, blossomPaint, centerPaint);
+    _drawBlossom(canvas, Offset(size.width - 28, size.height - 25), 13,
+        blossomPaint, centerPaint);
+
+    // Petals drift gently down across the celebration.
+    for (var i = 0; i < 18; i++) {
+      final seed = i * 37.0;
+      final baseX = (seed % 97) / 100 * size.width;
+      final baseY = ((i * 29) % 101) / 100;
+      final progress = (baseY + animation.value * (0.8 + (i % 4) * 0.12)) % 1;
+      final sway = math.sin((animation.value * math.pi * 2) + i) * 12;
+      final position = Offset(baseX + sway, progress * size.height);
+      final petalPaint = Paint()..color = petalColors[i % petalColors.length];
+
+      canvas.save();
+      canvas.translate(position.dx, position.dy);
+      canvas.rotate(animation.value * math.pi * 2 + i);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: 8, height: 13),
+        petalPaint,
+      );
+      canvas.restore();
+    }
+  }
+
+  void _drawBlossom(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint petalPaint,
+    Paint centerPaint,
+  ) {
+    for (var i = 0; i < 5; i++) {
+      final angle = i * math.pi * 2 / 5;
+      final petalCenter = center + Offset(
+        math.cos(angle) * radius * 0.55,
+        math.sin(angle) * radius * 0.55,
+      );
+      canvas.save();
+      canvas.translate(petalCenter.dx, petalCenter.dy);
+      canvas.rotate(angle);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: radius, height: radius * 0.62),
+        petalPaint,
+      );
+      canvas.restore();
+    }
+    canvas.drawCircle(center, radius * 0.16, centerPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CherryBlossomPainter oldDelegate) =>
+      oldDelegate.animation != animation;
 }
 
 class _GoalCard extends StatelessWidget {
