@@ -4,6 +4,7 @@ import '../models/month_data.dart';
 import '../models/expense_item.dart';
 import '../models/external_saving.dart';
 import '../models/note_item.dart';
+import '../models/saving_goal.dart';
 import 'firestore_service.dart';
 import 'cycle_calculator.dart';
 
@@ -60,6 +61,8 @@ class AppState extends ChangeNotifier {
     final id = _calculator.idFor(now);
     final periodStart = _calculator.cycleStartFor(now);
 
+    await _applyCompletedCycleContributions(periodStart);
+
     var month = await _firestore.getMonth(_uid, id);
     if (month == null) {
       // Carry over previous salary/saving goal as defaults if not provided.
@@ -86,6 +89,33 @@ class AppState extends ChangeNotifier {
 
     currentMonth = month;
     notifyListeners();
+  }
+
+  Future<void> _applyCompletedCycleContributions(DateTime currentPeriodStart) async {
+    final months = await _firestore.getAllMonths(_uid);
+    final goals = await _firestore.getAllGoals(_uid);
+    if (goals.isEmpty) return;
+
+    // Oldest first, so skipped cycles are reconciled in their actual order.
+    for (final month in months.reversed) {
+      final cycleEnd = _calculator.nextCycleStart(month.periodStart);
+      if (cycleEnd.isAfter(currentPeriodStart)) continue;
+
+      final overspend = (month.totalSpent - month.allowedToSpend).clamp(0, double.infinity);
+      var availableSavings = (month.savingGoal - overspend).clamp(0, double.infinity).toDouble();
+
+      for (final goal in goals) {
+        if (goal.createdAt.isAfter(cycleEnd) || goal.processedCycleIds.contains(month.id)) continue;
+
+        final credited = await _firestore.applyCycleGoalContribution(
+          _uid,
+          goal.id,
+          month.id,
+          availableSavings,
+        );
+        availableSavings = (availableSavings - credited).clamp(0, double.infinity).toDouble();
+      }
+    }
   }
 
   Future<void> updateSalaryAndSaving({double? salary, double? savingGoal}) async {
@@ -153,6 +183,19 @@ class AppState extends ChangeNotifier {
   Future<void> removeNote(String noteId) async {
     await _firestore.removeNote(_uid, noteId);
   }
+
+  Stream<List<SavingGoal>> watchSavingGoals() => _firestore.watchGoals(_uid);
+
+  Future<void> saveSavingGoal(SavingGoal goal) async {
+    await _firestore.saveGoal(_uid, goal);
+  }
+
+  Future<void> removeSavingGoal(String goalId) async {
+    await _firestore.removeGoal(_uid, goalId);
+  }
+
+  Future<double> addManualGoalContribution(String goalId, double amount) =>
+      _firestore.addManualGoalContribution(_uid, goalId, amount);
 
   Future<void> updateMonthStartDay(int newStartDay) async {
     monthStartDay = newStartDay;

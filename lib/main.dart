@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'theme.dart';
 import 'services/app_state.dart';
+import 'services/cycle_calculator.dart';
 import 'services/biometric_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/setup_screen.dart';
@@ -98,15 +100,51 @@ class _AppBody extends StatefulWidget {
   State<_AppBody> createState() => _AppBodyState();
 }
 
-class _AppBodyState extends State<_AppBody> {
+class _AppBodyState extends State<_AppBody> with WidgetsBindingObserver {
   bool _loaded = false;
+  Timer? _cycleTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     context.read<AppState>().loadForCurrentUser().then((_) {
-      if (mounted) setState(() => _loaded = true);
+      if (!mounted) return;
+      setState(() => _loaded = true);
+      _scheduleCycleCheck();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_loaded) return;
+    context.read<AppState>().loadForCurrentUser().then((_) {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleCycleCheck();
+    });
+  }
+
+  void _scheduleCycleCheck() {
+    _cycleTimer?.cancel();
+    final state = context.read<AppState>();
+    final currentMonth = state.currentMonth;
+    if (currentMonth == null) return;
+    final nextStart = CycleCalculator(state.monthStartDay).nextCycleStart(currentMonth.periodStart);
+    final delay = nextStart.difference(DateTime.now());
+    _cycleTimer = Timer(delay.isNegative ? Duration.zero : delay, () async {
+      await state.loadForCurrentUser();
+      if (!mounted) return;
+      setState(() {});
+      _scheduleCycleCheck();
+    });
+  }
+
+  @override
+  void dispose() {
+    _cycleTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override

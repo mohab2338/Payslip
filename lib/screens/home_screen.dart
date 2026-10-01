@@ -11,6 +11,7 @@ import 'history_screen.dart';
 import 'savings_overview_screen.dart';
 import 'settings_screen.dart';
 import 'notes_screen.dart';
+import 'goals_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -30,13 +31,31 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Salary tracker'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sticky_note_2_outlined),
-            tooltip: 'Notes',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NotesScreen()),
-            ),
+          PopupMenuButton<String>(
+            tooltip: 'More',
+            icon: const Icon(Icons.more_horiz),
+            onSelected: (value) {
+              final page = value == 'goals' ? const GoalsScreen() : const NotesScreen();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'goals',
+                child: ListTile(
+                  leading: Icon(Icons.flag_outlined),
+                  title: Text('Our goals'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'notes',
+                child: ListTile(
+                  leading: Icon(Icons.sticky_note_2_outlined),
+                  title: Text('Notes'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
           IconButton(
             icon: const Icon(Icons.account_balance_outlined),

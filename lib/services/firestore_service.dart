@@ -3,6 +3,7 @@ import '../models/month_data.dart';
 import '../models/expense_item.dart';
 import '../models/external_saving.dart';
 import '../models/note_item.dart';
+import '../models/saving_goal.dart';
 
 /// All Firestore reads/writes live here.
 ///
@@ -10,6 +11,7 @@ import '../models/note_item.dart';
 ///   users/{uid}                            -> { monthStartDay: int, setupDone: bool }
 ///   users/{uid}/months/{cycleId}           -> { periodStart, salary, savingGoal, items: [...] }
 ///   users/{uid}/external_savings/{itemId}  -> { id, title, amount, date }
+///   users/{uid}/goals/{goalId}             -> named savings goals and progress
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -24,6 +26,9 @@ class FirestoreService {
 
     CollectionReference<Map<String, dynamic>> _notesCol(String uid) =>
       _userDoc(uid).collection('notes');
+
+      CollectionReference<Map<String, dynamic>> _goalsCol(String uid) =>
+        _userDoc(uid).collection('goals');
 
   // ---------- user settings ----------
 
@@ -136,6 +141,71 @@ class FirestoreService {
       final notes = snap.docs.map((doc) => NoteItem.fromMap(doc.data())).toList();
       notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       return notes;
+    });
+  }
+
+  // ---------- named saving goals ----------
+
+  Stream<List<SavingGoal>> watchGoals(String uid) => _goalsCol(uid)
+      .orderBy('createdAt')
+      .snapshots()
+      .map((snap) => snap.docs.map((doc) => SavingGoal.fromMap(doc.data())).toList());
+
+  Future<List<SavingGoal>> getAllGoals(String uid) async {
+    final snap = await _goalsCol(uid).orderBy('createdAt').get();
+    return snap.docs.map((doc) => SavingGoal.fromMap(doc.data())).toList();
+  }
+
+  Future<void> saveGoal(String uid, SavingGoal goal) async {
+    await _goalsCol(uid).doc(goal.id).set(goal.toMap());
+  }
+
+  Future<void> removeGoal(String uid, String goalId) async {
+    await _goalsCol(uid).doc(goalId).delete();
+  }
+
+  Future<double> addManualGoalContribution(String uid, String goalId, double amount) async {
+    final goalRef = _goalsCol(uid).doc(goalId);
+    return _db.runTransaction<double>((transaction) async {
+      final snapshot = await transaction.get(goalRef);
+      final data = snapshot.data();
+      if (data == null) return 0;
+      final target = (data['targetAmount'] as num).toDouble();
+      final saved = (data['savedAmount'] as num? ?? 0).toDouble();
+      final credited = amount.clamp(0, (target - saved).clamp(0, target)).toDouble();
+      if (credited > 0) transaction.update(goalRef, {'savedAmount': saved + credited});
+      return credited;
+    });
+  }
+
+  Future<double> applyCycleGoalContribution(
+    String uid,
+    String goalId,
+    String cycleId,
+    double cycleSavings,
+  ) async {
+    final goalRef = _goalsCol(uid).doc(goalId);
+    return _db.runTransaction<double>((transaction) async {
+      final snapshot = await transaction.get(goalRef);
+      final data = snapshot.data();
+      if (data == null) return 0;
+      final processed = List<String>.from(data['processedCycleIds'] as List<dynamic>? ?? const []);
+      if (processed.contains(cycleId)) return 0;
+
+      final target = (data['targetAmount'] as num).toDouble();
+      final scheduled = (data['contributionPerCycle'] as num).toDouble();
+      final saved = (data['savedAmount'] as num? ?? 0).toDouble();
+      final remaining = (target - saved).clamp(0, target).toDouble();
+      processed.add(cycleId);
+      var credited = 0.0;
+      if (scheduled > 0 && cycleSavings >= scheduled && remaining > 0) {
+        credited = scheduled < remaining ? scheduled : remaining;
+      }
+      transaction.update(goalRef, {
+        'savedAmount': saved + credited,
+        'processedCycleIds': processed,
+      });
+      return credited;
     });
   }
 }
