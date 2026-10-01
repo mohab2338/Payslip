@@ -270,7 +270,7 @@ class GoalsScreen extends StatelessWidget {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'At the end of a saving cycle, a goal only gets its planned contribution if that full amount was actually saved. You can add or take money manually anytime. Taking money lowers the overall saved total only; source totals stay unchanged.',
+                          'At the end of a saving cycle, a goal only gets its planned contribution if that full amount was actually saved. Manual and cycle contributions are moved out of the general saved total; money taken from a goal is deducted there too. Source totals stay unchanged.',
                           style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                         ),
                       ),

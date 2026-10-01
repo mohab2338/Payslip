@@ -170,14 +170,23 @@ class FirestoreService {
 
   Future<double> addManualGoalContribution(String uid, String goalId, double amount) async {
     final goalRef = _goalsCol(uid).doc(goalId);
+    final userRef = _userDoc(uid);
     return _db.runTransaction<double>((transaction) async {
       final snapshot = await transaction.get(goalRef);
+      final userSnapshot = await transaction.get(userRef);
       final data = snapshot.data();
       if (data == null) return 0;
       final target = (data['targetAmount'] as num).toDouble();
       final saved = (data['savedAmount'] as num? ?? 0).toDouble();
       final credited = amount.clamp(0, (target - saved).clamp(0, target)).toDouble();
-      if (credited > 0) transaction.update(goalRef, {'savedAmount': saved + credited});
+      if (credited > 0) {
+        final priorAdjustments =
+            (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
+        transaction.update(goalRef, {'savedAmount': saved + credited});
+        transaction.set(userRef, {
+          'totalGoalWithdrawals': priorAdjustments + credited,
+        }, SetOptions(merge: true));
+      }
       return credited;
     });
   }
@@ -211,8 +220,10 @@ class FirestoreService {
     double cycleSavings,
   ) async {
     final goalRef = _goalsCol(uid).doc(goalId);
+    final userRef = _userDoc(uid);
     return _db.runTransaction<double>((transaction) async {
       final snapshot = await transaction.get(goalRef);
+      final userSnapshot = await transaction.get(userRef);
       final data = snapshot.data();
       if (data == null) return 0;
       final processed = List<String>.from(data['processedCycleIds'] as List<dynamic>? ?? const []);
@@ -231,6 +242,13 @@ class FirestoreService {
         'savedAmount': saved + credited,
         'processedCycleIds': processed,
       });
+      if (credited > 0) {
+        final priorAdjustments =
+            (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
+        transaction.set(userRef, {
+          'totalGoalWithdrawals': priorAdjustments + credited,
+        }, SetOptions(merge: true));
+      }
       return credited;
     });
   }
