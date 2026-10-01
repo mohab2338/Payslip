@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/month_data.dart';
 import '../models/expense_item.dart';
+import '../models/external_saving.dart';
 import 'firestore_service.dart';
 import 'cycle_calculator.dart';
 
@@ -114,6 +115,24 @@ class AppState extends ChangeNotifier {
   }
 
   Stream<List<MonthData>> watchHistory() => _firestore.watchAllMonths(_uid);
+
+  // ---------- external (manually added) savings, e.g. gold, cash kept outside the app ----------
+
+  Stream<List<ExternalSaving>> watchExternalSavings() => _firestore.watchExternalSavings(_uid);
+
+  Future<void> addExternalSaving(String title, double amount) async {
+    final item = ExternalSaving(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      title: title,
+      amount: amount,
+      date: DateTime.now(),
+    );
+    await _firestore.addExternalSaving(_uid, item);
+  }
+
+  Future<void> removeExternalSaving(ExternalSaving item) async {
+    await _firestore.removeExternalSaving(_uid, item.id);
+  }
 
   Future<void> updateMonthStartDay(int newStartDay) async {
     monthStartDay = newStartDay;

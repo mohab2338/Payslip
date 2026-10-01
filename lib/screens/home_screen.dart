@@ -3,10 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/app_state.dart';
 import '../theme.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/spend_ring.dart';
 import '../widgets/stat_card.dart';
 import 'add_item_screen.dart';
 import 'history_screen.dart';
+import 'savings_overview_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -27,6 +29,14 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Salary tracker'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.account_balance_outlined),
+            tooltip: 'Savings overview',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SavingsOverviewScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'History',
@@ -93,7 +103,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'spent so far',
+                            '${_currency.format(month.totalSpent)} spent so far',
                             style: TextStyle(color: AppColors.primaryLight, fontSize: 12),
                           ),
                         ],
@@ -153,6 +163,7 @@ class HomeScreen extends StatelessWidget {
                 ...month.items.reversed.map((item) => Dismissible(
                       key: ValueKey(item.id),
                       direction: DismissDirection.endToStart,
+                      confirmDismiss: (_) => confirmDelete(context, itemLabel: item.title),
                       onDismissed: (_) => state.removeExpenseItem(item),
                       background: Container(
                         alignment: Alignment.centerRight,

@@ -85,7 +85,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'total spent',
+                          '${_currency.format(month.totalSpent)} total spent',
                           style: TextStyle(color: AppColors.primaryLight, fontSize: 12),
                         ),
                       ],

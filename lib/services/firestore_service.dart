@@ -1,12 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/month_data.dart';
 import '../models/expense_item.dart';
+import '../models/external_saving.dart';
 
 /// All Firestore reads/writes live here.
 ///
 /// Structure:
-///   users/{uid}                       -> { monthStartDay: int, setupDone: bool }
-///   users/{uid}/months/{cycleId}      -> { periodStart, salary, savingGoal, items: [...] }
+///   users/{uid}                            -> { monthStartDay: int, setupDone: bool }
+///   users/{uid}/months/{cycleId}           -> { periodStart, salary, savingGoal, items: [...] }
+///   users/{uid}/external_savings/{itemId}  -> { id, title, amount, date }
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -15,6 +17,9 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> _monthsCol(String uid) =>
       _userDoc(uid).collection('months');
+
+  CollectionReference<Map<String, dynamic>> _externalSavingsCol(String uid) =>
+      _userDoc(uid).collection('external_savings');
 
   // ---------- user settings ----------
 
@@ -73,5 +78,20 @@ class FirestoreService {
     await _monthsCol(uid).doc(monthId).update({
       'items': FieldValue.arrayRemove([item.toMap()]),
     });
+  }
+
+  // ---------- external (manually added) savings ----------
+
+  Future<void> addExternalSaving(String uid, ExternalSaving item) async {
+    await _externalSavingsCol(uid).doc(item.id).set(item.toMap());
+  }
+
+  Future<void> removeExternalSaving(String uid, String itemId) async {
+    await _externalSavingsCol(uid).doc(itemId).delete();
+  }
+
+  Stream<List<ExternalSaving>> watchExternalSavings(String uid) {
+    return _externalSavingsCol(uid).orderBy('date', descending: true).snapshots().map(
+        (snap) => snap.docs.map((d) => ExternalSaving.fromMap(d.data())).toList());
   }
 }
