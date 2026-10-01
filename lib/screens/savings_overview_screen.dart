@@ -105,9 +105,15 @@ class SavingsOverviewScreen extends StatelessWidget {
                 final externalItems = externalSnap.data ?? [];
                 final totalExternal =
                     externalItems.fold(0.0, (sum, e) => sum + e.amount);
-                final grandTotal = totalFromCycles + totalExternal;
+                return StreamBuilder<double>(
+                  stream: state.watchTotalGoalWithdrawals(),
+                  builder: (context, withdrawalsSnap) {
+                    final totalGoalWithdrawals = withdrawalsSnap.data ?? 0;
+                    final grandTotal = (totalFromCycles + totalExternal - totalGoalWithdrawals)
+                        .clamp(0, double.infinity)
+                        .toDouble();
 
-                return ListView(
+                    return ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                   children: [
                     // Hero: grand total saved, across everything.
@@ -157,6 +163,36 @@ class SavingsOverviewScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (totalGoalWithdrawals > 0) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Taken from goals (deducted from total only)',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '−${_currency.format(totalGoalWithdrawals)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 28),
                     const Text('All cycles',
@@ -296,6 +332,8 @@ class SavingsOverviewScreen extends StatelessWidget {
                             ),
                           )),
                   ],
+                );
+                  },
                 );
               },
             );

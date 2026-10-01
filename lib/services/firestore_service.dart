@@ -24,11 +24,11 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> _externalSavingsCol(String uid) =>
       _userDoc(uid).collection('external_savings');
 
-    CollectionReference<Map<String, dynamic>> _notesCol(String uid) =>
+  CollectionReference<Map<String, dynamic>> _notesCol(String uid) =>
       _userDoc(uid).collection('notes');
 
-      CollectionReference<Map<String, dynamic>> _goalsCol(String uid) =>
-        _userDoc(uid).collection('goals');
+  CollectionReference<Map<String, dynamic>> _goalsCol(String uid) =>
+      _userDoc(uid).collection('goals');
 
   // ---------- user settings ----------
 
@@ -151,6 +151,10 @@ class FirestoreService {
       .snapshots()
       .map((snap) => snap.docs.map((doc) => SavingGoal.fromMap(doc.data())).toList());
 
+  Stream<double> watchTotalGoalWithdrawals(String uid) => _userDoc(uid).snapshots().map(
+        (snapshot) => (snapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0,
+      );
+
   Future<List<SavingGoal>> getAllGoals(String uid) async {
     final snap = await _goalsCol(uid).orderBy('createdAt').get();
     return snap.docs.map((doc) => SavingGoal.fromMap(doc.data())).toList();
@@ -175,6 +179,28 @@ class FirestoreService {
       final credited = amount.clamp(0, (target - saved).clamp(0, target)).toDouble();
       if (credited > 0) transaction.update(goalRef, {'savedAmount': saved + credited});
       return credited;
+    });
+  }
+
+  Future<double> withdrawFromGoal(String uid, String goalId, double amount) async {
+    final goalRef = _goalsCol(uid).doc(goalId);
+    final userRef = _userDoc(uid);
+    return _db.runTransaction<double>((transaction) async {
+      final goalSnapshot = await transaction.get(goalRef);
+      final userSnapshot = await transaction.get(userRef);
+      final goalData = goalSnapshot.data();
+      if (goalData == null) return 0;
+
+      final saved = (goalData['savedAmount'] as num? ?? 0).toDouble();
+      final requested = amount.clamp(0, saved).toDouble();
+      if (requested <= 0) return 0;
+      final priorWithdrawals =
+          (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
+      transaction.update(goalRef, {'savedAmount': saved - requested});
+      transaction.set(userRef, {
+        'totalGoalWithdrawals': priorWithdrawals + requested,
+      }, SetOptions(merge: true));
+      return requested;
     });
   }
 

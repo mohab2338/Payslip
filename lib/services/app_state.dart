@@ -186,6 +186,8 @@ class AppState extends ChangeNotifier {
 
   Stream<List<SavingGoal>> watchSavingGoals() => _firestore.watchGoals(_uid);
 
+  Stream<double> watchTotalGoalWithdrawals() => _firestore.watchTotalGoalWithdrawals(_uid);
+
   Future<void> saveSavingGoal(SavingGoal goal) async {
     await _firestore.saveGoal(_uid, goal);
   }
@@ -196,6 +198,9 @@ class AppState extends ChangeNotifier {
 
   Future<double> addManualGoalContribution(String goalId, double amount) =>
       _firestore.addManualGoalContribution(_uid, goalId, amount);
+
+  Future<double> withdrawFromGoal(String goalId, double amount) =>
+      _firestore.withdrawFromGoal(_uid, goalId, amount);
 
   Future<void> updateMonthStartDay(int newStartDay) async {
     monthStartDay = newStartDay;

@@ -164,6 +164,64 @@ class GoalsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _takeMoney(BuildContext context, SavingGoal goal) async {
+    final amountController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final amount = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Take money from ${goal.name}'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Available: ${_currency.format(goal.savedAmount)}'),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: amountController,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Amount', prefixText: 'E£ '),
+                validator: (value) {
+                  final parsed = double.tryParse(value?.trim() ?? '');
+                  if (parsed == null || parsed <= 0) return 'Enter a valid amount';
+                  if (parsed > goal.savedAmount) return 'Cannot take more than is saved for this goal';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(dialogContext, double.parse(amountController.text.trim()));
+              }
+            },
+            child: const Text('Take money'),
+          ),
+        ],
+      ),
+    );
+    amountController.dispose();
+    if (amount == null || !context.mounted) return;
+
+    final withdrawn = await context.read<AppState>().withdrawFromGoal(goal.id, amount);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_currency.format(withdrawn)} taken from ${goal.name}.')),
+      );
+    }
+  }
+
   Future<void> _deleteGoal(BuildContext context, SavingGoal goal) async {
     if (await confirmDelete(context, itemLabel: goal.name) && context.mounted) {
       await context.read<AppState>().removeSavingGoal(goal.id);
@@ -212,7 +270,7 @@ class GoalsScreen extends StatelessWidget {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'At the end of a saving cycle, a goal only gets its planned contribution if that full amount was actually saved. You can add money manually anytime.',
+                          'At the end of a saving cycle, a goal only gets its planned contribution if that full amount was actually saved. You can add or take money manually anytime. Taking money lowers the overall saved total only; source totals stay unchanged.',
                           style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                         ),
                       ),
@@ -239,6 +297,7 @@ class GoalsScreen extends StatelessWidget {
                   ...goals.map((goal) => _GoalCard(
                         goal: goal,
                         onAddMoney: () => _addMoney(context, goal),
+                    onTakeMoney: () => _takeMoney(context, goal),
                         onEdit: () => _editGoal(context, goal),
                         onDelete: () => _deleteGoal(context, goal),
                       )),
@@ -255,6 +314,7 @@ class _GoalCard extends StatelessWidget {
   const _GoalCard({
     required this.goal,
     required this.onAddMoney,
+    required this.onTakeMoney,
     required this.onEdit,
     required this.onDelete,
   });
@@ -262,6 +322,7 @@ class _GoalCard extends StatelessWidget {
   static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
   final SavingGoal goal;
   final VoidCallback onAddMoney;
+  final VoidCallback onTakeMoney;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -325,16 +386,33 @@ class _GoalCard extends StatelessWidget {
                 : '${_currency.format(goal.contributionPerCycle)} planned each cycle · ${_currency.format(goal.remainingAmount)} to go',
             style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
-          if (!complete) ...[
+          if (!complete || goal.savedAmount > 0) ...[
             const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: onAddMoney,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add money now'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                visualDensity: VisualDensity.compact,
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (!complete)
+                  OutlinedButton.icon(
+                    onPressed: onAddMoney,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add money now'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                if (goal.savedAmount > 0)
+                  OutlinedButton.icon(
+                    onPressed: onTakeMoney,
+                    icon: const Icon(Icons.south_west, size: 18),
+                    label: const Text('Take money'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.danger,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+              ],
             ),
           ],
         ],
