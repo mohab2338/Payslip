@@ -165,7 +165,35 @@ class FirestoreService {
   }
 
   Future<void> removeGoal(String uid, String goalId) async {
-    await _goalsCol(uid).doc(goalId).delete();
+    final goalRef = _goalsCol(uid).doc(goalId);
+    final userRef = _userDoc(uid);
+    await _db.runTransaction<void>((transaction) async {
+      final goalSnapshot = await transaction.get(goalRef);
+      final userSnapshot = await transaction.get(userRef);
+      final goalData = goalSnapshot.data();
+      if (goalData == null) return;
+
+      final isPending = goalData['status'] != SavingGoalStatus.achieved.name;
+      final saved = (goalData['savedAmount'] as num? ?? 0).toDouble();
+      final allocated =
+          (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
+      if (isPending && saved > 0) {
+        transaction.set(userRef, {
+          'totalGoalWithdrawals': (allocated - saved).clamp(0, double.infinity),
+        }, SetOptions(merge: true));
+      }
+      transaction.delete(goalRef);
+    });
+  }
+
+  Future<void> markGoalAchieved(String uid, String goalId) async {
+    final goalRef = _goalsCol(uid).doc(goalId);
+    await _db.runTransaction<void>((transaction) async {
+      final snapshot = await transaction.get(goalRef);
+      final data = snapshot.data();
+      if (data == null || data['status'] == SavingGoalStatus.achieved.name) return;
+      transaction.update(goalRef, {'status': SavingGoalStatus.achieved.name});
+    });
   }
 
   Future<double> addManualGoalContribution(String uid, String goalId, double amount) async {
@@ -175,7 +203,7 @@ class FirestoreService {
       final snapshot = await transaction.get(goalRef);
       final userSnapshot = await transaction.get(userRef);
       final data = snapshot.data();
-      if (data == null) return 0;
+      if (data == null || data['status'] == SavingGoalStatus.achieved.name) return 0;
       final target = (data['targetAmount'] as num).toDouble();
       final saved = (data['savedAmount'] as num? ?? 0).toDouble();
       final credited = amount.clamp(0, (target - saved).clamp(0, target)).toDouble();
@@ -201,13 +229,14 @@ class FirestoreService {
       if (goalData == null) return 0;
 
       final saved = (goalData['savedAmount'] as num? ?? 0).toDouble();
+      if (goalData['status'] == SavingGoalStatus.achieved.name) return 0;
       final requested = amount.clamp(0, saved).toDouble();
       if (requested <= 0) return 0;
-      final priorWithdrawals =
+      final priorAllocated =
           (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
       transaction.update(goalRef, {'savedAmount': saved - requested});
       transaction.set(userRef, {
-        'totalGoalWithdrawals': priorWithdrawals + requested,
+        'totalGoalWithdrawals': (priorAllocated - requested).clamp(0, double.infinity),
       }, SetOptions(merge: true));
       return requested;
     });
@@ -225,7 +254,7 @@ class FirestoreService {
       final snapshot = await transaction.get(goalRef);
       final userSnapshot = await transaction.get(userRef);
       final data = snapshot.data();
-      if (data == null) return 0;
+      if (data == null || data['status'] == SavingGoalStatus.achieved.name) return 0;
       final processed = List<String>.from(data['processedCycleIds'] as List<dynamic>? ?? const []);
       if (processed.contains(cycleId)) return 0;
 

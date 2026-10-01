@@ -176,7 +176,7 @@ class SavingsOverviewScreen extends StatelessWidget {
                           children: [
                             const Expanded(
                               child: Text(
-                                'Allocated to or taken from goals (deducted from total only)',
+                                'In goals or spent on achieved goals',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                             ),

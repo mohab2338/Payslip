@@ -196,6 +196,10 @@ class AppState extends ChangeNotifier {
     await _firestore.removeGoal(_uid, goalId);
   }
 
+  Future<void> markSavingGoalAchieved(String goalId) async {
+    await _firestore.markGoalAchieved(_uid, goalId);
+  }
+
   Future<double> addManualGoalContribution(String goalId, double amount) =>
       _firestore.addManualGoalContribution(_uid, goalId, amount);
 

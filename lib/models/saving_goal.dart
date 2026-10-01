@@ -1,3 +1,5 @@
+enum SavingGoalStatus { pending, achieved }
+
 class SavingGoal {
   final String id;
   final String name;
@@ -6,6 +8,7 @@ class SavingGoal {
   final double savedAmount;
   final DateTime createdAt;
   final List<String> processedCycleIds;
+  final SavingGoalStatus status;
 
   const SavingGoal({
     required this.id,
@@ -15,6 +18,7 @@ class SavingGoal {
     required this.savedAmount,
     required this.createdAt,
     this.processedCycleIds = const [],
+    this.status = SavingGoalStatus.pending,
   });
 
     double get remainingAmount =>
@@ -31,6 +35,7 @@ class SavingGoal {
         'savedAmount': savedAmount,
         'createdAt': createdAt.toIso8601String(),
         'processedCycleIds': processedCycleIds,
+        'status': status.name,
       };
 
   factory SavingGoal.fromMap(Map<String, dynamic> map) => SavingGoal(
@@ -41,6 +46,10 @@ class SavingGoal {
         savedAmount: (map['savedAmount'] as num?)?.toDouble() ?? 0,
         createdAt: DateTime.parse(map['createdAt'] as String),
         processedCycleIds: List<String>.from(map['processedCycleIds'] as List<dynamic>? ?? const []),
+        status: SavingGoalStatus.values.firstWhere(
+          (status) => status.name == map['status'],
+          orElse: () => SavingGoalStatus.pending,
+        ),
       );
 
   SavingGoal copyWith({
@@ -49,6 +58,7 @@ class SavingGoal {
     double? contributionPerCycle,
     double? savedAmount,
     List<String>? processedCycleIds,
+    SavingGoalStatus? status,
   }) =>
       SavingGoal(
         id: id,
@@ -58,5 +68,6 @@ class SavingGoal {
         savedAmount: savedAmount ?? this.savedAmount,
         createdAt: createdAt,
         processedCycleIds: processedCycleIds ?? this.processedCycleIds,
+        status: status ?? this.status,
       );
 }
