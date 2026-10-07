@@ -30,6 +30,55 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _selectionMode = false;
   final Set<String> _selectedItemIds = {};
 
+  static const _categoryPalettes = [
+    (Color(0xFF075C4B), Color(0xFFB8E9D9), Color(0xFF78D2B5)),
+    (Color(0xFF7A2D13), Color(0xFFFFC0A5), Color(0xFFFF835D)),
+    (Color(0xFF40368F), Color(0xFFD0C8FF), Color(0xFFAA9DFF)),
+    (Color(0xFF7B2444), Color(0xFFFFC1D5), Color(0xFFEE8CAB)),
+    (Color(0xFF17618A), Color(0xFFC0E8FF), Color(0xFF78C9F2)),
+    (Color(0xFF795717), Color(0xFFFFE6A4), Color(0xFFF4C85F)),
+  ];
+
+  IconData _iconForCategoryName(String name) {
+    final value = name.toLowerCase();
+    if (value.contains('food') || value.contains('grocer') || value.contains('restaurant')) {
+      return Icons.restaurant_outlined;
+    }
+    if (value.contains('transport') || value.contains('car') || value.contains('fuel')) {
+      return Icons.directions_car_outlined;
+    }
+    if (value.contains('shop') || value.contains('cloth') || value.contains('clothing')) {
+      return Icons.shopping_bag_outlined;
+    }
+    if (value.contains('health') || value.contains('medical') || value.contains('pharmacy')) {
+      return Icons.favorite_border;
+    }
+    if (value.contains('home') || value.contains('house') || value.contains('rent')) {
+      return Icons.home_outlined;
+    }
+    if (value.contains('bill') || value.contains('utility') || value.contains('electric')) {
+      return Icons.receipt_long_outlined;
+    }
+    if (value.contains('entertain') || value.contains('movie') || value.contains('game')) {
+      return Icons.movie_outlined;
+    }
+    if (value.contains('education') || value.contains('school') || value.contains('book')) {
+      return Icons.school_outlined;
+    }
+    if (value.contains('travel') || value.contains('flight') || value.contains('holiday')) {
+      return Icons.flight_outlined;
+    }
+    if (value.contains('pet')) return Icons.pets_outlined;
+    if (value.contains('gift')) return Icons.card_giftcard_outlined;
+    if (value.contains('phone') || value.contains('internet') || value.contains('mobile')) {
+      return Icons.wifi_outlined;
+    }
+    return Icons.category_outlined;
+  }
+
+  (Color, Color, Color) _paletteForCategory(int index) =>
+      _categoryPalettes[index % _categoryPalettes.length];
+
   Future<void> _addBudgetCategory(BuildContext context, {SpendingCategory? category}) async {
     final month = context.read<AppState>().currentMonth;
     final otherBudgets = month?.categories
@@ -169,17 +218,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (month == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final selectedTotal = month.items
+        .where((item) => _selectedItemIds.contains(item.id))
+        .fold(0.0, (sum, item) => sum + item.amount);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Salary tracker'),
         actions: [
-          if (_selectionMode && _selectedItemIds.isNotEmpty)
-            IconButton(
-              tooltip: 'Group selected purchases',
-              icon: const Icon(Icons.create_new_folder_outlined),
-              onPressed: () => _createPurchaseGroup(context),
-            ),
           IconButton(
             tooltip: _selectionMode ? 'Finish selecting purchases' : 'Select purchases',
             icon: Icon(_selectionMode ? Icons.close : Icons.checklist),
@@ -240,14 +286,62 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AddItemScreen()),
-        ),
-        icon: const Icon(Icons.add),
-        label: const Text('Add purchase'),
-      ),
+      floatingActionButton: _selectionMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddItemScreen()),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Add purchase'),
+            ),
+      bottomNavigationBar: _selectionMode
+          ? SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: AppColors.divider)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Selected total',
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_currency.format(selectedTotal)}  ·  ${_selectedItemIds.length} items',
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _selectedItemIds.isEmpty ? null : () => _createPurchaseGroup(context),
+                      icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                      label: const Text('Group'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => state.loadForCurrentUser(),
@@ -354,7 +448,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               else
-                ...month.categories.map((category) => _buildCategoryCard(context, month, category)),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: month.categories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    mainAxisExtent: 128,
+                  ),
+                  itemBuilder: (context, index) =>
+                      _buildCategoryCard(context, month, month.categories[index], index),
+                ),
 
               if (month.purchaseGroups.isNotEmpty) ...[
                 const SizedBox(height: 16),
@@ -372,10 +478,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                   if (_selectionMode)
-                    Text(
-                      '${_selectedItemIds.length} selected · ${_currency.format(month.items.where((item) => _selectedItemIds.contains(item.id)).fold(0.0, (sum, item) => sum + item.amount))}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                    ),
+                    Text('${_selectedItemIds.length} selected',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
               const SizedBox(height: 10),
@@ -409,10 +513,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(18),
+                          color: const Color(0xFFF8F8F6),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           children: [
@@ -427,6 +531,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   }
                                 }),
                               ),
+                              _purchaseIcon(month, item),
+                              const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,54 +597,107 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, MonthData month, SpendingCategory category) {
+  Widget _buildCategoryCard(
+    BuildContext context,
+    MonthData month,
+    SpendingCategory category,
+    int index,
+  ) {
     final categoryItems = month.items
         .where((ExpenseItem item) => item.categoryId == category.id)
         .toList();
     final spent = categoryItems.fold(0.0, (sum, item) => sum + item.amount);
     final left = category.budgetAmount - spent;
+    final palette = _paletteForCategory(index);
+    final progress = category.budgetAmount <= 0
+        ? 0.0
+        : (spent / category.budgetAmount).clamp(0.0, 1.0).toDouble();
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: palette.$1, borderRadius: BorderRadius.circular(22)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => CategoryDetailScreen(month: month, category: category),
+          MaterialPageRoute(builder: (_) => CategoryDetailScreen(month: month, category: category)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(_iconForCategoryName(category.name), color: palette.$2, size: 21),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    iconSize: 19,
+                    icon: Icon(Icons.more_horiz, color: palette.$2),
+                    onSelected: (action) {
+                      if (action == 'edit') _addBudgetCategory(context, category: category);
+                      if (action == 'delete') _deleteBudgetCategory(context, category);
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Edit category')),
+                      PopupMenuItem(value: 'delete', child: Text('Delete category')),
+                    ],
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                category.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${_currency.format(spent)} of ${_currency.format(category.budgetAmount)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: palette.$2, fontSize: 11),
+              ),
+              const SizedBox(height: 7),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 5,
+                  backgroundColor: Colors.black.withOpacity(0.18),
+                  color: palette.$3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${categoryItems.length} items · ${_currency.format(left)} left',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: palette.$2.withOpacity(0.95), fontSize: 10),
+              ),
+            ],
           ),
         ),
-        leading: const CircleAvatar(
-          backgroundColor: AppColors.accentLight,
-          child: Icon(Icons.pie_chart_outline, color: AppColors.accent),
-        ),
-        title: Text(category.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${categoryItems.length} purchases · ${_currency.format(spent)} spent · ${_currency.format(left)} left'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_currency.format(category.budgetAmount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                const Text('allowed', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-              ],
-            ),
-            PopupMenuButton<String>(
-              tooltip: 'Category options',
-              onSelected: (action) {
-                if (action == 'edit') _addBudgetCategory(context, category: category);
-                if (action == 'delete') _deleteBudgetCategory(context, category);
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit category')),
-                PopupMenuItem(value: 'delete', child: Text('Delete category')),
-              ],
-            ),
-          ],
-        ),
       ),
+    );
+  }
+
+  Widget _purchaseIcon(MonthData month, ExpenseItem item) {
+    final categoryIndex = month.categories.indexWhere((category) => category.id == item.categoryId);
+    if (categoryIndex < 0) {
+      return const CircleAvatar(
+        radius: 21,
+        backgroundColor: Color(0xFFE4F3EF),
+        child: Icon(Icons.shopping_bag_outlined, size: 20, color: AppColors.accent),
+      );
+    }
+    final category = month.categories[categoryIndex];
+    final palette = _paletteForCategory(categoryIndex);
+    return CircleAvatar(
+      radius: 21,
+      backgroundColor: palette.$2.withOpacity(0.42),
+      child: Icon(_iconForCategoryName(category.name), size: 20, color: palette.$1),
     );
   }
 

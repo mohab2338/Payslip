@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Light, warm bento-style palette used across the app.
 class AppColors {
-  static const Color background = Color(0xFFF2F1EC);
+  static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color primary = Color(0xFF26215C); // deep purple hero tiles
   static const Color primaryDark = Color(0xFF1B1842);
