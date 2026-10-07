@@ -224,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Salary tracker'),
+        title: const Text('Our Life'),
         actions: [
           IconButton(
             tooltip: _selectionMode ? 'Finish selecting purchases' : 'Select purchases',
@@ -467,7 +467,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Text('Purchase groups',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
-                ...month.purchaseGroups.map((group) => _buildPurchaseGroupCard(month, group)),
+                ...month.purchaseGroups.map(
+                  (group) => _buildPurchaseGroupCard(context, state, month, group),
+                ),
               ],
 
               const SizedBox(height: 16),
@@ -701,16 +703,36 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPurchaseGroupCard(MonthData month, PurchaseGroup group) {
+  Widget _buildPurchaseGroupCard(
+    BuildContext context,
+    AppState state,
+    MonthData month,
+    PurchaseGroup group,
+  ) {
     final groupedItems = month.items
         .where((ExpenseItem item) => item.groupId == group.id)
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
     final total = groupedItems.fold(0.0, (sum, item) => sum + item.amount);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
-      child: ExpansionTile(
+    return Dismissible(
+      key: ValueKey('purchase-group-${group.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => confirmDelete(context, itemLabel: group.name),
+      onDismissed: (_) => state.removePurchaseGroup(group.id),
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline, color: AppColors.danger),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+        child: ExpansionTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         leading: const Icon(Icons.folder_outlined, color: AppColors.primary),
@@ -733,6 +755,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       trailing: Text(_currency.format(item.amount)),
                     ))
                 .toList(),
+        ),
       ),
     );
   }

@@ -48,6 +48,7 @@ class ExpenseItem {
     String? categoryId,
     bool clearCategory = false,
     String? groupId,
+    bool clearGroup = false,
   }) {
     return ExpenseItem(
       id: id,
@@ -56,7 +57,7 @@ class ExpenseItem {
       date: date,
       note: note ?? this.note,
       categoryId: clearCategory ? null : categoryId ?? this.categoryId,
-      groupId: groupId ?? this.groupId,
+      groupId: clearGroup ? null : groupId ?? this.groupId,
     );
   }
 }

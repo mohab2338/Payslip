@@ -231,6 +231,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> removePurchaseGroup(String groupId) async {
+    final month = currentMonth;
+    if (month == null) return;
+    final updatedItems = month.items
+        .map((item) => item.groupId == groupId ? item.copyWith(clearGroup: true) : item)
+        .toList();
+    currentMonth = month.copyWith(
+      items: updatedItems,
+      purchaseGroups: month.purchaseGroups.where((group) => group.id != groupId).toList(),
+    );
+    await _firestore.upsertMonth(_uid, currentMonth!);
+    notifyListeners();
+  }
+
   Stream<List<MonthData>> watchHistory() => _firestore.watchAllMonths(_uid);
 
   // ---------- external (manually added) savings, e.g. gold, cash kept outside the app ----------

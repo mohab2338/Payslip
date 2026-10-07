@@ -5,9 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="Salary Tracker"
+        android:label="Our Life"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/ic_home_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -43,15 +43,19 @@ jobs:
           flutter create --platforms=android --org com.example --project-name salary_tracker .
 
       # Now layer our actual customizations on top of that freshly generated,
-      # version-correct project: fingerprint permissions, the
-      # FlutterFragmentActivity subclass local_auth needs, and the Firebase
-      # Gradle plugin.
+      # version-correct project: fingerprint permissions, the launcher icon,
+      # the FlutterFragmentActivity subclass local_auth needs, and Firebase.
       - name: Apply Salary Tracker customizations to the generated Android project
         run: |
           set -e
 
           # 1) Swap in our AndroidManifest.xml (adds biometric + internet permissions)
           cp android_overlay/app/src/main/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+
+          # 1a) Install the custom home icon referenced by the manifest.
+          mkdir -p android/app/src/main/res/drawable
+          cp android_overlay/app/src/main/res/drawable/ic_home_launcher.xml \
+             android/app/src/main/res/drawable/ic_home_launcher.xml
 
           # 2) Swap in our MainActivity.kt (extends FlutterFragmentActivity, required by local_auth)
           cp android_overlay/app/src/main/kotlin/com/example/salary_tracker/MainActivity.kt \

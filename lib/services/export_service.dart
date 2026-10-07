@@ -7,7 +7,7 @@ class ExportService {
   String buildCsvString(MonthData month) {
     final dateFmt = DateFormat('yyyy-MM-dd');
     final rows = <List<dynamic>>[
-      ['Salary Tracker Export'],
+      ['Our Life Export'],
       ['Period start', dateFmt.format(month.periodStart)],
       ['Salary', month.salary],
       ['Saving goal', month.savingGoal],

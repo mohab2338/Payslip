@@ -47,7 +47,7 @@ class _AuthScreenState extends State<AuthScreen> {
     // Biometric unlock only works because Firebase Auth already persists the
     // session on-device; fingerprint just re-confirms it's the same person.
     if (_authService.currentUser == null) return;
-    final ok = await _bioService.authenticate(reason: 'Unlock Salary Tracker');
+    final ok = await _bioService.authenticate(reason: 'Unlock Our Life');
     if (ok && mounted) {
       // AuthGate listens to authStateChanges and will navigate automatically.
       setState(() {});

@@ -28,7 +28,7 @@ class SalaryTrackerApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => AppState(),
       child: MaterialApp(
-        title: 'Salary Tracker',
+        title: 'Our Life',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         home: const AuthGate(),

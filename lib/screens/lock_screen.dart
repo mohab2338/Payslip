@@ -24,7 +24,7 @@ class _LockScreenState extends State<LockScreen> {
 
   Future<void> _authenticate() async {
     setState(() => _authenticating = true);
-    final ok = await _bioService.authenticate(reason: 'Unlock Salary Tracker');
+    final ok = await _bioService.authenticate(reason: 'Unlock Our Life');
     setState(() => _authenticating = false);
     if (ok) widget.onUnlocked();
   }
@@ -47,7 +47,7 @@ class _LockScreenState extends State<LockScreen> {
                 child: const Icon(Icons.fingerprint, color: AppColors.primary, size: 44),
               ),
               const SizedBox(height: 24),
-              const Text('Salary Tracker is locked',
+              const Text('Our Life is locked',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               const Text('Use your fingerprint to continue',

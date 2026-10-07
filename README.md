@@ -1,4 +1,4 @@
-# Salary Tracker (Flutter + Firebase)
+# Our Life (Flutter + Firebase)
 
 Track your salary, a savings goal, and every purchase within a pay cycle that
 starts on whatever day you choose — not a fixed calendar month. Data lives in
@@ -42,9 +42,9 @@ salary_tracker/
 > Instead, `.github/workflows/android.yml` generates a brand-new `android/`
 > folder from scratch on every run, using Flutter's own template for
 > whichever Flutter version the workflow installs — guaranteeing the
-> versions always match. It then copies in the handful of files under
-> `android_overlay/` (fingerprint permissions, the `MainActivity` class
-> `local_auth` needs, and the Firebase Gradle plugin) on top of that fresh
+> versions always match. It then copies in the customized manifest, home
+> launcher icon, the `MainActivity` class `local_auth` needs, and Firebase
+> Gradle configuration from `android_overlay/` on top of that fresh
 > project. You never need to touch Gradle/AGP/Kotlin versions yourself.
 
 ---
