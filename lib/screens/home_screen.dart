@@ -61,8 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
               TextFormField(
                 controller: budgetController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Allowed amount', prefixText: 'E£ '),
-                helperText: 'Available to assign: ${_currency.format(maxBudget < 0 ? 0 : maxBudget)}',
+                decoration: InputDecoration(
+                  labelText: 'Allowed amount',
+                  prefixText: 'E£ ',
+                  helperText:
+                      'Available to assign: ${_currency.format(maxBudget < 0 ? 0 : maxBudget)}',
+                ),
                 validator: (value) {
                   final amount = double.tryParse(value?.trim() ?? '');
                   if (amount == null || amount <= 0) return 'Enter a valid amount';
