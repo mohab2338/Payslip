@@ -5,6 +5,8 @@ import '../models/expense_item.dart';
 import '../models/external_saving.dart';
 import '../models/note_item.dart';
 import '../models/saving_goal.dart';
+import '../models/spending_category.dart';
+import '../models/purchase_group.dart';
 import 'firestore_service.dart';
 import 'cycle_calculator.dart';
 
@@ -68,11 +70,13 @@ class AppState extends ChangeNotifier {
       // Carry over previous salary/saving goal as defaults if not provided.
       double defaultSalary = salary ?? 0;
       double defaultSaving = savingGoal ?? 0;
+      var defaultCategories = <SpendingCategory>[];
       if (salary == null) {
         final prevMonths = await _firestore.getAllMonths(_uid);
         if (prevMonths.isNotEmpty) {
           defaultSalary = prevMonths.first.salary;
           defaultSaving = prevMonths.first.savingGoal;
+          defaultCategories = prevMonths.first.categories;
         }
       }
       month = MonthData(
@@ -80,6 +84,7 @@ class AppState extends ChangeNotifier {
         periodStart: periodStart,
         salary: defaultSalary,
         savingGoal: defaultSaving,
+        categories: defaultCategories,
       );
       await _firestore.upsertMonth(_uid, month);
     } else if (salary != null || savingGoal != null) {
@@ -125,7 +130,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addExpenseItem(String title, double amount, {String note = ''}) async {
+  Future<void> addExpenseItem(
+    String title,
+    double amount, {
+    String note = '',
+    String? categoryId,
+  }) async {
     if (currentMonth == null) return;
     final item = ExpenseItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -133,6 +143,7 @@ class AppState extends ChangeNotifier {
       amount: amount,
       date: DateTime.now(),
       note: note,
+      categoryId: categoryId,
     );
     await _firestore.addItem(_uid, currentMonth!.id, item);
     currentMonth!.items.add(item);
@@ -151,6 +162,72 @@ class AppState extends ChangeNotifier {
     await _firestore.updateItem(_uid, currentMonth!.id, item);
     final index = currentMonth!.items.indexWhere((existing) => existing.id == item.id);
     if (index >= 0) currentMonth!.items[index] = item;
+    notifyListeners();
+  }
+
+  Future<void> addSpendingCategory(String name, double budgetAmount) async {
+    final month = currentMonth;
+    if (month == null) return;
+    final category = SpendingCategory(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: name,
+      budgetAmount: budgetAmount,
+    );
+    currentMonth = month.copyWith(categories: [...month.categories, category]);
+    await _firestore.upsertMonth(_uid, currentMonth!);
+    notifyListeners();
+  }
+
+  Future<void> updateSpendingCategory(SpendingCategory updatedCategory) async {
+    final month = currentMonth;
+    if (month == null) return;
+    currentMonth = month.copyWith(
+      categories: month.categories
+          .map((category) => category.id == updatedCategory.id ? updatedCategory : category)
+          .toList(),
+    );
+    await _firestore.upsertMonth(_uid, currentMonth!);
+    notifyListeners();
+  }
+
+  Future<void> removeSpendingCategory(String categoryId) async {
+    final month = currentMonth;
+    if (month == null) return;
+    final updatedItems = month.items
+        .map((item) => item.categoryId == categoryId
+            ? item.copyWith(clearCategory: true)
+            : item)
+        .toList();
+    currentMonth = month.copyWith(
+      items: updatedItems,
+      categories: month.categories.where((category) => category.id != categoryId).toList(),
+    );
+    await _firestore.upsertMonth(_uid, currentMonth!);
+    notifyListeners();
+  }
+
+  Future<void> createPurchaseGroup(String name, Set<String> itemIds) async {
+    final month = currentMonth;
+    if (month == null || itemIds.isEmpty) return;
+    final existingItemIds = month.items
+        .where((item) => itemIds.contains(item.id))
+        .map((item) => item.id)
+        .toSet();
+    if (existingItemIds.isEmpty) return;
+    final group = PurchaseGroup(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: name,
+    );
+    final updatedItems = month.items
+        .map((item) => existingItemIds.contains(item.id)
+            ? item.copyWith(groupId: group.id)
+            : item)
+        .toList();
+    currentMonth = month.copyWith(
+      items: updatedItems,
+      purchaseGroups: [...month.purchaseGroups, group],
+    );
+    await _firestore.upsertMonth(_uid, currentMonth!);
     notifyListeners();
   }
 

@@ -19,6 +19,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _amountCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   bool _saving = false;
+  String? _categoryId;
 
   @override
   void initState() {
@@ -28,6 +29,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
       _titleCtrl.text = item.title;
       _amountCtrl.text = item.amount.toStringAsFixed(2);
       _noteCtrl.text = item.note;
+      _categoryId = item.categoryId;
     }
   }
 
@@ -35,17 +37,24 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     final state = context.read<AppState>();
+    final categories = state.currentMonth?.categories ?? [];
+    final selectedCategoryId = categories.any((category) => category.id == _categoryId)
+      ? _categoryId
+      : null;
     if (widget.item == null) {
       await state.addExpenseItem(
         _titleCtrl.text.trim(),
         double.parse(_amountCtrl.text),
         note: _noteCtrl.text.trim(),
+        categoryId: selectedCategoryId,
       );
     } else {
       await state.updateExpenseItem(widget.item!.copyWith(
         title: widget.noteOnly ? null : _titleCtrl.text.trim(),
         amount: widget.noteOnly ? null : double.parse(_amountCtrl.text),
         note: _noteCtrl.text.trim(),
+        categoryId: widget.noteOnly ? null : selectedCategoryId,
+        clearCategory: !widget.noteOnly && selectedCategoryId == null,
       ));
     }
     if (mounted) Navigator.pop(context);
@@ -61,6 +70,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = context.watch<AppState>().currentMonth?.categories ?? [];
+    final hasCurrentCategory = categories.any((category) => category.id == _categoryId);
+    final dropdownCategoryId = hasCurrentCategory ? _categoryId! : '';
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.noteOnly ? 'Purchase note' : widget.item == null ? 'Add purchase' : 'Edit purchase'),
@@ -97,6 +109,24 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   },
                 ),
                 if (!widget.noteOnly) const SizedBox(height: 14),
+                if (!widget.noteOnly && categories.isNotEmpty) ...[
+                  DropdownButtonFormField<String>(
+                    value: dropdownCategoryId,
+                    decoration: const InputDecoration(
+                      labelText: 'Budget category',
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('Uncategorized')),
+                      ...categories.map((category) => DropdownMenuItem(
+                            value: category.id,
+                            child: Text(category.name),
+                          )),
+                    ],
+                    onChanged: (value) => setState(() => _categoryId = value?.isEmpty == true ? null : value),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 TextFormField(
                   controller: _noteCtrl,
                   minLines: 3,

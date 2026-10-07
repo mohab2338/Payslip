@@ -1,4 +1,6 @@
 import 'expense_item.dart';
+import 'spending_category.dart';
+import 'purchase_group.dart';
 
 /// Represents one salary cycle (from the user-chosen start day to the day
 /// before the next cycle's start day). The document id in Firestore is
@@ -10,6 +12,8 @@ class MonthData {
   final double salary;
   final double savingGoal;
   final List<ExpenseItem> items;
+  final List<SpendingCategory> categories;
+  final List<PurchaseGroup> purchaseGroups;
 
   MonthData({
     required this.id,
@@ -17,7 +21,11 @@ class MonthData {
     required this.salary,
     required this.savingGoal,
     List<ExpenseItem>? items,
-  }) : items = items ?? [];
+    List<SpendingCategory>? categories,
+    List<PurchaseGroup>? purchaseGroups,
+  })  : items = items ?? [],
+        categories = categories ?? [],
+        purchaseGroups = purchaseGroups ?? [];
 
   double get totalSpent => items.fold(0.0, (sum, e) => sum + e.amount);
 
@@ -38,6 +46,8 @@ class MonthData {
       'salary': salary,
       'savingGoal': savingGoal,
       'items': items.map((e) => e.toMap()).toList(),
+      'categories': categories.map((e) => e.toMap()).toList(),
+      'purchaseGroups': purchaseGroups.map((e) => e.toMap()).toList(),
     };
   }
 
@@ -50,6 +60,12 @@ class MonthData {
       items: (map['items'] as List<dynamic>? ?? [])
           .map((e) => ExpenseItem.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      categories: (map['categories'] as List<dynamic>? ?? [])
+          .map((e) => SpendingCategory.fromMap(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      purchaseGroups: (map['purchaseGroups'] as List<dynamic>? ?? [])
+          .map((e) => PurchaseGroup.fromMap(Map<String, dynamic>.from(e as Map)))
+          .toList(),
     );
   }
 
@@ -57,6 +73,8 @@ class MonthData {
     double? salary,
     double? savingGoal,
     List<ExpenseItem>? items,
+    List<SpendingCategory>? categories,
+    List<PurchaseGroup>? purchaseGroups,
   }) {
     return MonthData(
       id: id,
@@ -64,6 +82,8 @@ class MonthData {
       salary: salary ?? this.salary,
       savingGoal: savingGoal ?? this.savingGoal,
       items: items ?? this.items,
+      categories: categories ?? this.categories,
+      purchaseGroups: purchaseGroups ?? this.purchaseGroups,
     );
   }
 }

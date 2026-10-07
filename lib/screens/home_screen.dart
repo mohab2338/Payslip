@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/app_state.dart';
+import '../models/expense_item.dart';
+import '../models/spending_category.dart';
+import '../models/month_data.dart';
+import '../models/purchase_group.dart';
 import '../theme.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/spend_ring.dart';
@@ -12,11 +16,146 @@ import 'savings_overview_screen.dart';
 import 'settings_screen.dart';
 import 'notes_screen.dart';
 import 'goals_screen.dart';
+import 'category_detail_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
+  bool _selectionMode = false;
+  final Set<String> _selectedItemIds = {};
+
+  Future<void> _addBudgetCategory(BuildContext context, {SpendingCategory? category}) async {
+    final month = context.read<AppState>().currentMonth;
+    final otherBudgets = month?.categories
+            .where((entry) => entry.id != category?.id)
+            .fold(0.0, (sum, entry) => sum + entry.budgetAmount) ??
+        0.0;
+    final maxBudget = (month?.allowedToSpend ?? 0) - otherBudgets;
+    final nameController = TextEditingController(text: category?.name ?? '');
+    final budgetController = TextEditingController(
+      text: category?.budgetAmount.toStringAsFixed(2) ?? '',
+    );
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<(String, double)>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(category == null ? 'Add spending category' : 'Edit spending category'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Category name'),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Enter a name' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: budgetController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Allowed amount', prefixText: 'E£ '),
+                helperText: 'Available to assign: ${_currency.format(maxBudget < 0 ? 0 : maxBudget)}',
+                validator: (value) {
+                  final amount = double.tryParse(value?.trim() ?? '');
+                  if (amount == null || amount <= 0) return 'Enter a valid amount';
+                  if (amount > maxBudget) return 'Cannot exceed the remaining allowed spending';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(dialogContext, (nameController.text.trim(), double.parse(budgetController.text.trim())));
+              }
+            },
+            child: Text(category == null ? 'Add category' : 'Save changes'),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    budgetController.dispose();
+    if (result != null && context.mounted) {
+      final appState = context.read<AppState>();
+      if (category == null) {
+        await appState.addSpendingCategory(result.$1, result.$2);
+      } else {
+        await appState.updateSpendingCategory(SpendingCategory(
+          id: category.id,
+          name: result.$1,
+          budgetAmount: result.$2,
+        ));
+      }
+    }
+  }
+
+  Future<void> _deleteBudgetCategory(BuildContext context, SpendingCategory category) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete ${category.name}?'),
+        content: const Text('Purchases in this category will become uncategorized.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<AppState>().removeSpendingCategory(category.id);
+    }
+  }
+
+  Future<void> _createPurchaseGroup(BuildContext context) async {
+    if (_selectedItemIds.isEmpty) return;
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Name this purchase group'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Group name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(dialogContext, controller.text.trim());
+              }
+            },
+            child: const Text('Create group'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name != null && context.mounted) {
+      await context.read<AppState>().createPurchaseGroup(name, Set<String>.from(_selectedItemIds));
+      setState(() {
+        _selectedItemIds.clear();
+        _selectionMode = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +170,20 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Salary tracker'),
         actions: [
+          if (_selectionMode && _selectedItemIds.isNotEmpty)
+            IconButton(
+              tooltip: 'Group selected purchases',
+              icon: const Icon(Icons.create_new_folder_outlined),
+              onPressed: () => _createPurchaseGroup(context),
+            ),
+          IconButton(
+            tooltip: _selectionMode ? 'Finish selecting purchases' : 'Select purchases',
+            icon: Icon(_selectionMode ? Icons.close : Icons.checklist),
+            onPressed: () => setState(() {
+              _selectionMode = !_selectionMode;
+              if (!_selectionMode) _selectedItemIds.clear();
+            }),
+          ),
           PopupMenuButton<String>(
             tooltip: 'More',
             icon: const Icon(Icons.more_horiz),
@@ -175,8 +328,52 @@ class HomeScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 24),
-              const Text('Purchases this cycle',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Spending categories',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _addBudgetCategory(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add part'),
+                  ),
+                ],
+              ),
+              if (month.categories.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Create budget parts to divide your allowed spending.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                )
+              else
+                ...month.categories.map((category) => _buildCategoryCard(context, month, category)),
+
+              if (month.purchaseGroups.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text('Purchase groups',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                ...month.purchaseGroups.map((group) => _buildPurchaseGroupCard(month, group)),
+              ],
+
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Purchases this cycle',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                  if (_selectionMode)
+                    Text(
+                      '${_selectedItemIds.length} selected · ${_currency.format(month.items.where((item) => _selectedItemIds.contains(item.id)).fold(0.0, (sum, item) => sum + item.amount))}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                ],
+              ),
               const SizedBox(height: 10),
 
               if (month.items.isEmpty)
@@ -192,7 +389,10 @@ class HomeScreen extends StatelessWidget {
                       key: ValueKey(item.id),
                       direction: DismissDirection.endToStart,
                       confirmDismiss: (_) => confirmDelete(context, itemLabel: item.title),
-                      onDismissed: (_) => state.removeExpenseItem(item),
+                      onDismissed: (_) {
+                        _selectedItemIds.remove(item.id);
+                        state.removeExpenseItem(item);
+                      },
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
@@ -212,6 +412,17 @@ class HomeScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
+                            if (_selectionMode)
+                              Checkbox(
+                                value: _selectedItemIds.contains(item.id),
+                                onChanged: (selected) => setState(() {
+                                  if (selected == true) {
+                                    _selectedItemIds.add(item.id);
+                                  } else {
+                                    _selectedItemIds.remove(item.id);
+                                  }
+                                }),
+                              ),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,6 +483,93 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(BuildContext context, MonthData month, SpendingCategory category) {
+    final categoryItems = month.items
+        .where((ExpenseItem item) => item.categoryId == category.id)
+        .toList();
+    final spent = categoryItems.fold(0.0, (sum, item) => sum + item.amount);
+    final left = category.budgetAmount - spent;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CategoryDetailScreen(month: month, category: category),
+          ),
+        ),
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.accentLight,
+          child: Icon(Icons.pie_chart_outline, color: AppColors.accent),
+        ),
+        title: Text(category.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text('${categoryItems.length} purchases · ${_currency.format(spent)} spent · ${_currency.format(left)} left'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(_currency.format(category.budgetAmount), style: const TextStyle(fontWeight: FontWeight.w700)),
+                const Text('allowed', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              ],
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Category options',
+              onSelected: (action) {
+                if (action == 'edit') _addBudgetCategory(context, category: category);
+                if (action == 'delete') _deleteBudgetCategory(context, category);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text('Edit category')),
+                PopupMenuItem(value: 'delete', child: Text('Delete category')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPurchaseGroupCard(MonthData month, PurchaseGroup group) {
+    final groupedItems = month.items
+        .where((ExpenseItem item) => item.groupId == group.id)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    final total = groupedItems.fold(0.0, (sum, item) => sum + item.amount);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+      child: ExpansionTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        leading: const Icon(Icons.folder_outlined, color: AppColors.primary),
+        title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text('${groupedItems.length} purchases'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_currency.format(total), style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(width: 8),
+            const Icon(Icons.expand_more),
+          ],
+        ),
+        children: groupedItems.isEmpty
+            ? [const ListTile(title: Text('No purchases in this group.'))]
+            : groupedItems
+                .map((item) => ListTile(
+                      dense: true,
+                      title: Text(item.title),
+                      trailing: Text(_currency.format(item.amount)),
+                    ))
+                .toList(),
       ),
     );
   }
