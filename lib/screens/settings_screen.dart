@@ -59,6 +59,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await context.read<AppState>().updateMonthStartDay(day);
   }
 
+  Future<void> _changePassword() async {
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    String? errorMessage;
+    var saving = false;
+
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Change password'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: currentController,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Current password'),
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Enter your current password'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: newController,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'New password'),
+                    validator: (value) => value == null || value.length < 6
+                        ? 'Use at least 6 characters'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: confirmController,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Confirm new password'),
+                    validator: (value) => value != newController.text
+                        ? 'Passwords do not match'
+                        : null,
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(errorMessage!, style: const TextStyle(color: AppColors.danger)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() {
+                        saving = true;
+                        errorMessage = null;
+                      });
+                      try {
+                        await _authService.changePassword(
+                          currentPassword: currentController.text,
+                          newPassword: newController.text,
+                        );
+                        if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                      } catch (error) {
+                        if (dialogContext.mounted) {
+                          setDialogState(() {
+                            errorMessage = _authService.passwordChangeError(error);
+                            saving = false;
+                          });
+                        }
+                      }
+                    },
+              child: Text(saving ? 'Updating…' : 'Update password'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    currentController.dispose();
+    newController.dispose();
+    confirmController.dispose();
+    if (changed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password updated successfully.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,6 +211,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 28),
             const Text('Security', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
             const SizedBox(height: 6),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.lock_reset_outlined),
+              title: const Text('Change password'),
+              subtitle: const Text('Verify your current password first'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _changePassword,
+            ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _bioEnabled,

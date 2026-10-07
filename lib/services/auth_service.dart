@@ -29,6 +29,48 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw FirebaseAuthException(
+        code: 'user-not-found',
+        message: 'No signed-in email and password account was found.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+  }
+
+  String passwordChangeError(Object error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+          return 'Your current password is incorrect.';
+        case 'weak-password':
+          return 'Choose a stronger password (at least 6 characters).';
+        case 'requires-recent-login':
+          return 'Please sign in again, then retry changing your password.';
+        case 'user-not-found':
+          return error.message ?? 'No signed-in email and password account was found.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.';
+        default:
+          return error.message ?? 'Could not change the password. Please try again.';
+      }
+    }
+    return 'Could not change the password. Please try again.';
+  }
+
   /// Maps Firebase auth error codes to friendly messages.
   String friendlyError(Object error) {
     if (error is FirebaseAuthException) {
