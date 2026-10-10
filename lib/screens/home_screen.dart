@@ -36,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
     (Color(0xFF40368F), Color(0xFFD0C8FF), Color(0xFFAA9DFF)),
     (Color(0xFF7B2444), Color(0xFFFFC1D5), Color(0xFFEE8CAB)),
     (Color(0xFF17618A), Color(0xFFC0E8FF), Color(0xFF78C9F2)),
-    (Color(0xFF2A5A52), Color(0xFFD7F1EC), Color(0xFF8DCFC0)),
   ];
 
   IconData _iconForCategoryName(String name) {
