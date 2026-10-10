@@ -448,28 +448,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               else
-                ReorderableGridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.1,
-                  onReorder: (oldIndex, newIndex) {
-                    context.read<AppState>().reorderSpendingCategories(oldIndex, newIndex);
-                  },
-                  proxyDecorator: (child, index, animation) => Material(
-                    color: Colors.transparent,
-                    child: child,
-                  ),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
                     for (int index = 0; index < month.categories.length; index++)
-                      _buildCategoryCard(
-                        context,
-                        month,
-                        month.categories[index],
-                        index,
-                        key: ValueKey(month.categories[index].id),
+                      LongPressDraggable<SpendingCategory>(
+                        data: month.categories[index],
+                        delay: const Duration(milliseconds: 150),
+                        feedback: Material(
+                          color: Colors.transparent,
+                          child: Transform.scale(
+                            scale: 1.02,
+                            child: SizedBox(
+                              width: (MediaQuery.of(context).size.width - 68) / 2,
+                              child: _buildCategoryCard(
+                                context,
+                                month,
+                                month.categories[index],
+                                index,
+                              ),
+                            ),
+                          ),
+                        ),
+                        childWhenDragging: Opacity(
+                          opacity: 0.35,
+                          child: _buildCategoryCard(
+                            context,
+                            month,
+                            month.categories[index],
+                            index,
+                          ),
+                        ),
+                        child: DragTarget<SpendingCategory>(
+                          onAcceptWithDetails: (details) {
+                            final draggedId = details.data.id;
+                            final targetId = month.categories[index].id;
+                            if (draggedId == targetId) return;
+                            final oldIndex = month.categories.indexWhere((category) => category.id == draggedId);
+                            final newIndex = month.categories.indexWhere((category) => category.id == targetId);
+                            if (oldIndex >= 0 && newIndex >= 0) {
+                              context.read<AppState>().reorderSpendingCategories(oldIndex, newIndex);
+                            }
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            return _buildCategoryCard(
+                              context,
+                              month,
+                              month.categories[index],
+                              index,
+                            );
+                          },
+                        ),
                       ),
                   ],
                 ),
@@ -627,10 +657,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final progress = category.budgetAmount <= 0
         ? 0.0
         : (spent / category.budgetAmount).clamp(0.0, 1.0).toDouble();
-    return Container(
+    final cardWidth = (MediaQuery.of(context).size.width - 68) / 2;
+    return SizedBox(
       key: key,
-      decoration: BoxDecoration(color: palette.$1, borderRadius: BorderRadius.circular(22)),
-      child: InkWell(
+      width: cardWidth,
+      child: Container(
+        decoration: BoxDecoration(color: palette.$1, borderRadius: BorderRadius.circular(22)),
+        child: InkWell(
         borderRadius: BorderRadius.circular(22),
         onTap: () => Navigator.push(
           context,
@@ -694,6 +727,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
