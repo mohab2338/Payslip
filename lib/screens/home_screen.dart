@@ -33,10 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _categoryPalettes = [
     (Color(0xFF7B1E3A), Color(0xFFF3D7DF), Color(0xFFE58AA8)),
     (Color(0xFFB7791F), Color(0xFFFFF3C4), Color(0xFFE9C76A)),
-    (Color(0xFF0F7A52), Color(0xFFDCFCE7), Color(0xFF5CC989)),
-    (Color(0xFF1565C0), Color(0xFFE3F2FD), Color(0xFF78B6F8)),
+    (Color(0xFF0D6A48), Color(0xFFDCFCE7), Color(0xFF4CB77D)),
+    (Color(0xFF124FA3), Color(0xFFE3F2FD), Color(0xFF5FA2F7)),
     (Color(0xFF1E2A78), Color(0xFFE0E7FF), Color(0xFF8AA2FF)),
-    (Color(0xFFB61E5D), Color(0xFFFCE7F3), Color(0xFFF28AC3)),
+    (Color(0xFF9E1A4C), Color(0xFFFCE7F3), Color(0xFFDE739F)),
     (Color(0xFF5B39A6), Color(0xFFEDE7FF), Color(0xFFB29DFF)),
   ];
 
