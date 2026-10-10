@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final Set<String> _selectedItemIds = {};
 
   static const _categoryPalettes = [
-    (Color(0xFFB42318), Color(0xFFFDE3E1), Color(0xFFF17D6C)),
+    (Color(0xFF7B1E3A), Color(0xFFF3D7DF), Color(0xFFE58AA8)),
     (Color(0xFFB7791F), Color(0xFFFFF3C4), Color(0xFFE9C76A)),
     (Color(0xFF0F7A52), Color(0xFFDCFCE7), Color(0xFF5CC989)),
     (Color(0xFF1565C0), Color(0xFFE3F2FD), Color(0xFF78B6F8)),
