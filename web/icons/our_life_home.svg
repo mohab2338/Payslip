@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Our Life home icon">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2B236A"/>
+      <stop offset="100%" stop-color="#1B163D"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="52" fill="url(#bg)"/>
+  <path d="M128 34L42 104h20v84c0 17 13 30 30 30h36v-62h24v62h36c17 0 30-13 30-30v-84h20L128 34z" fill="#FFFFFF"/>
+  <rect x="110" y="122" width="36" height="72" rx="10" fill="#24A37A"/>
+</svg>

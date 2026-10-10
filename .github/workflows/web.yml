@@ -54,6 +54,22 @@ jobs:
       - name: Install Flutter packages
         run: flutter pub get
 
+      - name: Apply custom web icon
+        run: |
+          mkdir -p web/icons
+          cp web/icons/our_life_home.svg web/icons/our_life_home.svg
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('web/index.html')
+          text = p.read_text()
+          text = text.replace('href="favicon.png"', 'href="icons/our_life_home.svg"')
+          text = text.replace('href="icons/Icon-192.png"', 'href="icons/our_life_home.svg"')
+          text = text.replace('rel="icon"', 'rel="icon" type="image/svg+xml"')
+          if 'apple-mobile-web-app-icon' not in text:
+              text = text.replace('</head>', '  <link rel="apple-touch-icon" href="icons/our_life_home.svg">\n</head>')
+          p.write_text(text)
+          PY
+
       # This repo is served from a GitHub Pages *project* site
       # (username.github.io/reponame/), so all asset URLs need that
       # repository-name prefix - --base-href does that for us.

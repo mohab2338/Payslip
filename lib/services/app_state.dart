@@ -206,6 +206,27 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> reorderSpendingCategories(int oldIndex, int newIndex) async {
+    final month = currentMonth;
+    if (month == null) return;
+
+    final categories = [...month.categories];
+    if (oldIndex < 0 || newIndex < 0 || oldIndex >= categories.length || newIndex >= categories.length) {
+      return;
+    }
+
+    final item = categories.removeAt(oldIndex);
+    var targetIndex = newIndex;
+    if (oldIndex < targetIndex) {
+      targetIndex -= 1;
+    }
+    categories.insert(targetIndex.clamp(0, categories.length), item);
+
+    currentMonth = month.copyWith(categories: categories);
+    await _firestore.upsertMonth(_uid, currentMonth!);
+    notifyListeners();
+  }
+
   Future<void> createPurchaseGroup(String name, Set<String> itemIds) async {
     final month = currentMonth;
     if (month == null || itemIds.isEmpty) return;

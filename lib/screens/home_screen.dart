@@ -448,18 +448,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               else
-                GridView.builder(
+                ReorderableListView(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: month.categories.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    mainAxisExtent: 128,
+                  onReorder: (oldIndex, newIndex) {
+                    context.read<AppState>().reorderSpendingCategories(oldIndex, newIndex);
+                  },
+                  proxyDecorator: (child, index, animation) => Material(
+                    color: Colors.transparent,
+                    child: child,
                   ),
-                  itemBuilder: (context, index) =>
-                      _buildCategoryCard(context, month, month.categories[index], index),
+                  children: [
+                    for (int index = 0; index < month.categories.length; index++)
+                      _buildCategoryCard(
+                        context,
+                        month,
+                        month.categories[index],
+                        index,
+                        key: ValueKey(month.categories[index].id),
+                      ),
+                  ],
                 ),
 
               if (month.purchaseGroups.isNotEmpty) ...[
@@ -603,8 +611,9 @@ class _HomeScreenState extends State<HomeScreen> {
     BuildContext context,
     MonthData month,
     SpendingCategory category,
-    int index,
-  ) {
+    int index, {
+    Key? key,
+  }) {
     final categoryItems = month.items
         .where((ExpenseItem item) => item.categoryId == category.id)
         .toList();
@@ -615,6 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ? 0.0
         : (spent / category.budgetAmount).clamp(0.0, 1.0).toDouble();
     return Container(
+      key: key,
       decoration: BoxDecoration(color: palette.$1, borderRadius: BorderRadius.circular(22)),
       child: InkWell(
         borderRadius: BorderRadius.circular(22),
