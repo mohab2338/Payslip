@@ -32,11 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _categoryPalettes = [
     (Color(0xFF075C4B), Color(0xFFB8E9D9), Color(0xFF78D2B5)),
-    (Color(0xFF7A2D13), Color(0xFFFFC0A5), Color(0xFFFF835D)),
+    (Color(0xFF0F5F5A), Color(0xFFBFEAE0), Color(0xFF78D5BA)),
     (Color(0xFF40368F), Color(0xFFD0C8FF), Color(0xFFAA9DFF)),
     (Color(0xFF7B2444), Color(0xFFFFC1D5), Color(0xFFEE8CAB)),
     (Color(0xFF17618A), Color(0xFFC0E8FF), Color(0xFF78C9F2)),
-    (Color(0xFF795717), Color(0xFFFFE6A4), Color(0xFFF4C85F)),
+    (Color(0xFF2A5A52), Color(0xFFD7F1EC), Color(0xFF8DCFC0)),
   ];
 
   IconData _iconForCategoryName(String name) {
@@ -448,9 +448,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               else
-                ReorderableListView(
+                ReorderableGridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 1.1,
                   onReorder: (oldIndex, newIndex) {
                     context.read<AppState>().reorderSpendingCategories(oldIndex, newIndex);
                   },
