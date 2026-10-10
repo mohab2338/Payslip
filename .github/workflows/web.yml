@@ -57,14 +57,18 @@ jobs:
       - name: Apply custom web icon
         run: |
           mkdir -p web/icons
-          cp web/icons/our_life_home.svg web/icons/our_life_home.svg
+          if [ ! -f web/icons/our_life_home.svg ]; then
+            echo "Expected web/icons/our_life_home.svg to exist after checkout."
+            exit 1
+          fi
           python3 - <<'PY'
           from pathlib import Path
           p = Path('web/index.html')
           text = p.read_text()
           text = text.replace('href="favicon.png"', 'href="icons/our_life_home.svg"')
           text = text.replace('href="icons/Icon-192.png"', 'href="icons/our_life_home.svg"')
-          text = text.replace('rel="icon"', 'rel="icon" type="image/svg+xml"')
+          if 'rel="icon" type="image/svg+xml"' not in text:
+              text = text.replace('rel="icon"', 'rel="icon" type="image/svg+xml"')
           if 'apple-mobile-web-app-icon' not in text:
               text = text.replace('</head>', '  <link rel="apple-touch-icon" href="icons/our_life_home.svg">\n</head>')
           p.write_text(text)
