@@ -18,6 +18,8 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
   static final _currency =
       NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
   String? _selectedCategoryId;
+  List<ReferenceCategory> _loadedCategories = const [];
+  List<ReferenceGood> _loadedGoods = const [];
 
   Future<void> _addCategory(BuildContext context) async {
     await _editCategory(context);
@@ -489,6 +491,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
             if (!categoriesSnapshot.hasData)
               return const Center(child: CircularProgressIndicator());
             final categories = categoriesSnapshot.data!;
+            _loadedCategories = categories;
             if (_selectedCategoryId != null &&
                 !categories
                     .any((category) => category.id == _selectedCategoryId)) {
@@ -502,6 +505,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                 if (!goodsSnapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
                 final goods = goodsSnapshot.data!;
+                _loadedGoods = goods;
                 final visibleGoods = _selectedCategoryId == null
                     ? goods
                     : goods
@@ -843,17 +847,30 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
 
   Future<void> _openAddGood(BuildContext context) async {
     final state = context.read<AppState>();
-    var categories = await state.watchReferenceCategories().first;
-    if (!context.mounted) return;
-    if (categories.isEmpty) {
-      await _addCategory(context);
-      if (!context.mounted) return;
-      categories = await state.watchReferenceCategories().first;
-    }
-    if (categories.isEmpty) return;
-    final goods = await state.watchReferenceGoods().first;
-    if (context.mounted) {
-      await _editGood(context, categories, goods);
+    try {
+      var categories = _loadedCategories;
+      if (categories.isEmpty) {
+        await _addCategory(context);
+        if (!context.mounted) return;
+        categories = await state.watchReferenceCategories().first;
+        if (!context.mounted) return;
+      }
+      if (categories.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Add a category before adding a good.')),
+          );
+        }
+        return;
+      }
+      await _editGood(context, categories, _loadedGoods);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open Add good: $error')),
+        );
+      }
     }
   }
 
