@@ -357,11 +357,18 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  Future<void> updateReferenceCategory(ReferenceCategory category) =>
+      _firestore.saveReferenceCategory(_uid, category);
+
+  Future<void> removeReferenceCategory(String id) =>
+      _firestore.removeReferenceCategory(_uid, id);
+
   Future<void> saveReferenceGood({
     String? id,
     required String name,
     required String categoryId,
     required Map<String, double> shopPrices,
+    String? bestQualityShop,
   }) async {
     final goodId = id ?? DateTime.now().microsecondsSinceEpoch.toString();
     await _firestore.saveReferenceGood(
@@ -371,6 +378,7 @@ class AppState extends ChangeNotifier {
         name: name.trim(),
         categoryId: categoryId,
         shopPrices: shopPrices,
+        bestQualityShop: bestQualityShop,
         updatedAt: DateTime.now(),
       ),
     );

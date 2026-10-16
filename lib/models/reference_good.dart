@@ -3,6 +3,7 @@ class ReferenceGood {
   final String name;
   final String categoryId;
   final Map<String, double> shopPrices;
+  final String? bestQualityShop;
   final DateTime updatedAt;
 
   const ReferenceGood({
@@ -10,6 +11,7 @@ class ReferenceGood {
     required this.name,
     required this.categoryId,
     required this.shopPrices,
+    this.bestQualityShop,
     required this.updatedAt,
   });
 
@@ -28,6 +30,7 @@ class ReferenceGood {
         'name': name,
         'categoryId': categoryId,
         'shopPrices': shopPrices,
+        'bestQualityShop': bestQualityShop,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -38,6 +41,7 @@ class ReferenceGood {
         shopPrices: (map['shopPrices'] as Map? ?? {}).map(
           (key, value) => MapEntry(key.toString(), (value as num).toDouble()),
         ),
+        bestQualityShop: map['bestQualityShop'] as String?,
         updatedAt: DateTime.parse(map['updatedAt'] as String),
       );
 }

@@ -20,12 +20,17 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
   String? _selectedCategoryId;
 
   Future<void> _addCategory(BuildContext context) async {
-    final controller = TextEditingController();
+    await _editCategory(context);
+  }
+
+  Future<void> _editCategory(BuildContext context,
+      {ReferenceCategory? category}) async {
+    final controller = TextEditingController(text: category?.name ?? '');
     final formKey = GlobalKey<FormState>();
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Add category'),
+        title: Text(category == null ? 'Add category' : 'Edit category'),
         content: Form(
           key: formKey,
           child: TextFormField(
@@ -48,14 +53,53 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                 Navigator.pop(dialogContext, controller.text.trim());
               }
             },
-            child: const Text('Add category'),
+            child: Text(category == null ? 'Add category' : 'Save changes'),
           ),
         ],
       ),
     );
     controller.dispose();
     if (name != null && context.mounted) {
-      await context.read<AppState>().addReferenceCategory(name);
+      if (category == null) {
+        await context.read<AppState>().addReferenceCategory(name);
+      } else {
+        await context.read<AppState>().updateReferenceCategory(
+              ReferenceCategory(
+                id: category.id,
+                name: name,
+                createdAt: category.createdAt,
+              ),
+            );
+      }
+    }
+  }
+
+  Future<void> _deleteCategory(
+      BuildContext context, ReferenceCategory category) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete ${category.name}?'),
+        content: const Text(
+            'This also permanently deletes all goods and shop prices in this category.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete category'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<AppState>().removeReferenceCategory(category.id);
+      if (_selectedCategoryId == category.id) {
+        setState(() => _selectedCategoryId = null);
+      }
     }
   }
 
@@ -94,6 +138,24 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.category_outlined),
                       title: Text(category.name),
+                      trailing: PopupMenuButton<String>(
+                        tooltip: 'Category options',
+                        onSelected: (action) {
+                          if (action == 'edit') {
+                            Navigator.pop(sheetContext);
+                            _editCategory(context, category: category);
+                          } else if (action == 'delete') {
+                            Navigator.pop(sheetContext);
+                            _deleteCategory(context, category);
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                              value: 'edit', child: Text('Edit category')),
+                          PopupMenuItem(
+                              value: 'delete', child: Text('Delete category')),
+                        ],
+                      ),
                     )),
               SizedBox(
                 width: double.infinity,
@@ -116,22 +178,46 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
   Future<void> _editGood(
     BuildContext context,
     List<ReferenceCategory> categories,
-    List<String> allShops, {
+    List<ReferenceGood> allGoods, {
     ReferenceGood? good,
   }) async {
     final nameController = TextEditingController(text: good?.name ?? '');
     final categoryController = ValueNotifier<String?>(good?.categoryId);
     final formKey = GlobalKey<FormState>();
-    final shopNames = <String>{...allShops, ...?good?.shopPrices.keys}.toList()
-      ..sort();
-    final shopControllers = <String, TextEditingController>{
-      for (final shop in shopNames)
-        shop: TextEditingController(
-            text: good?.shopPrices[shop]?.toString() ?? ''),
-    };
+    final shopControllers = <String, TextEditingController>{};
     final newShopController = TextEditingController();
     final prices = <String, double>{...?good?.shopPrices};
+    final bestQualityShop = ValueNotifier<String?>(good?.bestQualityShop);
+    var activeCategoryId = categoryController.value;
     StateSetter? refreshDialog;
+
+    void syncCategoryShops(String? categoryId) {
+      final shops = allGoods
+          .where((entry) => entry.categoryId == categoryId)
+          .expand((entry) => entry.shopPrices.keys)
+          .toSet();
+      if (good?.categoryId == categoryId) {
+        shops.addAll(good!.shopPrices.keys);
+      }
+      for (final shop in shopControllers.keys.toList()) {
+        if (!shops.contains(shop)) {
+          shopControllers.remove(shop)?.dispose();
+          prices.remove(shop);
+        }
+      }
+      for (final shop in shops) {
+        shopControllers.putIfAbsent(
+          shop,
+          () => TextEditingController(text: prices[shop]?.toString() ?? ''),
+        );
+      }
+      if (bestQualityShop.value != null &&
+          !shops.contains(bestQualityShop.value)) {
+        bestQualityShop.value = null;
+      }
+    }
+
+    syncCategoryShops(categoryController.value);
 
     void addShop() {
       final shop = newShopController.text.trim();
@@ -186,8 +272,21 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                                     child: Text(category.name),
                                   ))
                               .toList(),
-                          onChanged: (value) =>
-                              categoryController.value = value,
+                          onChanged: (value) {
+                            categoryController.value = value;
+                            setDialogState(() {
+                              if (value != activeCategoryId) {
+                                activeCategoryId = value;
+                                prices.clear();
+                                bestQualityShop.value = null;
+                              }
+                              syncCategoryShops(value);
+                              if (!shopControllers
+                                  .containsKey(bestQualityShop.value)) {
+                                bestQualityShop.value = null;
+                              }
+                            });
+                          },
                           validator: (value) =>
                               value == null ? 'Choose a category' : null,
                         ),
@@ -195,7 +294,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                       const SizedBox(height: 16),
                       const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text('Shop prices',
+                        child: Text('Shop prices (check the best-quality shop)',
                             style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       const SizedBox(height: 8),
@@ -207,7 +306,8 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                                   color: AppColors.textSecondary,
                                   fontSize: 12)),
                         ),
-                      ...shopControllers.entries.map((entry) => Padding(
+                      ...shopControllers.entries.toList().map((entry) =>
+                          Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Row(
                               children: [
@@ -216,6 +316,21 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis)),
                                 const SizedBox(width: 10),
+                                ValueListenableBuilder<String?>(
+                                  valueListenable: bestQualityShop,
+                                  builder: (context, selectedShop, _) =>
+                                      Checkbox(
+                                    value: selectedShop == entry.key,
+                                    onChanged: entry.value.text.trim().isEmpty
+                                        ? null
+                                        : (checked) => setDialogState(() {
+                                              bestQualityShop.value =
+                                                  checked == true
+                                                      ? entry.key
+                                                      : null;
+                                            }),
+                                  ),
+                                ),
                                 SizedBox(
                                   width: 130,
                                   child: TextFormField(
@@ -226,14 +341,17 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                                     decoration: const InputDecoration(
                                         labelText: 'Price', prefixText: 'E£ '),
                                     validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
                                         return null;
                                       }
-                                        final parsed = double.tryParse(value.trim());
+                                      final parsed =
+                                          double.tryParse(value.trim());
                                       return parsed == null || parsed <= 0
                                           ? 'Enter valid price'
                                           : null;
                                     },
+                                    onChanged: (_) => setDialogState(() {}),
                                   ),
                                 ),
                                 IconButton(
@@ -243,6 +361,9 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                                         .remove(entry.key)
                                         ?.dispose();
                                     prices.remove(entry.key);
+                                    if (bestQualityShop.value == entry.key) {
+                                      bestQualityShop.value = null;
+                                    }
                                   }),
                                   icon: const Icon(Icons.remove_circle_outline,
                                       color: AppColors.danger),
@@ -298,6 +419,10 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                       prices[entry.key] = double.parse(value);
                     }
                   }
+                  if (bestQualityShop.value != null &&
+                      !prices.containsKey(bestQualityShop.value)) {
+                    bestQualityShop.value = null;
+                  }
                   Navigator.pop(dialogContext, true);
                 },
                 child: const Text('Save good'),
@@ -311,6 +436,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
     void disposeControllers() {
       nameController.dispose();
       categoryController.dispose();
+      bestQualityShop.dispose();
       newShopController.dispose();
       for (final controller in shopControllers.values) {
         controller.dispose();
@@ -323,6 +449,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
             name: nameController.text,
             categoryId: categoryController.value!,
             shopPrices: prices,
+            bestQualityShop: bestQualityShop.value,
           );
     }
     disposeControllers();
@@ -380,11 +507,6 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                     : goods
                         .where((good) => good.categoryId == _selectedCategoryId)
                         .toList();
-                final shops = goods
-                    .expand((good) => good.shopPrices.keys)
-                    .toSet()
-                    .toList()
-                  ..sort();
                 final categoryOrder = {
                   for (var i = 0; i < categories.length; i++)
                     categories[i].id: i
@@ -431,7 +553,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                           ? _emptyCategories()
                           : visibleGoods.isEmpty
                               ? _emptyGoods()
-                              : _goodsTable(categories, visibleGoods, shops),
+                              : _goodsTable(categories, visibleGoods),
                     ),
                   ],
                 );
@@ -488,8 +610,8 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
         ),
       );
 
-  Widget _goodsTable(List<ReferenceCategory> categories,
-      List<ReferenceGood> goods, List<String> shops) {
+  Widget _goodsTable(
+      List<ReferenceCategory> categories, List<ReferenceGood> goods) {
     final grouped = <String, List<ReferenceGood>>{};
     for (final good in goods) {
       grouped.putIfAbsent(good.categoryId, () => []).add(good);
@@ -498,58 +620,74 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         const nameColumnWidth = 170.0;
-        const cheapestColumnWidth = 170.0;
+        const bestColumnWidth = 160.0;
         const shopColumnWidth = 128.0;
-        final minWidth = nameColumnWidth +
-            cheapestColumnWidth +
-            shops.length * shopColumnWidth;
         return Scrollbar(
           thumbVisibility: true,
-          child: SingleChildScrollView(
+          child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: minWidth < constraints.maxWidth - 32
-                  ? constraints.maxWidth - 32
-                  : minWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _tableRow(
-                    height: 48,
-                    color: AppColors.primary,
-                    children: [
-                      _cell('Good', nameColumnWidth, header: true),
-                      ...shops.map(
-                          (shop) => _cell(shop, shopColumnWidth, header: true)),
-                      _cell('Best price', cheapestColumnWidth, header: true),
-                    ],
-                  ),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        for (final category in categories.where((category) =>
-                            grouped.containsKey(category.id))) ...[
-                          Container(
-                            height: 38,
-                            alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            color: AppColors.accentLight,
-                            child: Text(category.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.accent)),
-                          ),
-                          for (final good in grouped[category.id]!)
-                            _goodRow(good, shops, nameColumnWidth,
-                                shopColumnWidth, cheapestColumnWidth),
-                        ],
-                      ],
+            children: [
+              for (final category in categories
+                  .where((category) => grouped.containsKey(category.id)))
+                Builder(builder: (context) {
+                  final categoryGoods = grouped[category.id]!;
+                  final categoryShops = categoryGoods
+                      .expand((good) => good.shopPrices.keys)
+                      .toSet()
+                      .toList()
+                    ..sort();
+                  final tableWidth = nameColumnWidth +
+                      bestColumnWidth * 2 +
+                      categoryShops.length * shopColumnWidth;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: tableWidth < constraints.maxWidth - 32
+                            ? constraints.maxWidth - 32
+                            : tableWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              height: 38,
+                              alignment: Alignment.centerLeft,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: const BoxDecoration(
+                                color: AppColors.accentLight,
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(10)),
+                              ),
+                              child: Text(category.name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.accent)),
+                            ),
+                            _tableRow(
+                              height: 48,
+                              color: AppColors.primary,
+                              children: [
+                                _cell('Good', nameColumnWidth, header: true),
+                                ...categoryShops.map((shop) =>
+                                    _cell(shop, shopColumnWidth, header: true)),
+                                _cell('Best price', bestColumnWidth,
+                                    header: true),
+                                _cell('Best quality', bestColumnWidth,
+                                    header: true),
+                              ],
+                            ),
+                            for (final good in categoryGoods)
+                              _goodRow(good, categoryShops, nameColumnWidth,
+                                  shopColumnWidth, bestColumnWidth),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  );
+                }),
+            ],
           ),
         );
       },
@@ -629,6 +767,35 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                         ),
                 ),
               ),
+              SizedBox(
+                width: bestWidth,
+                child: Container(
+                  margin: const EdgeInsets.all(5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: good.bestQualityShop == null ||
+                          good.shopPrices[good.bestQualityShop] == null
+                      ? const Text('—')
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(good.bestQualityShop!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 11, color: AppColors.primary)),
+                            Text(
+                                _currency.format(
+                                    good.shopPrices[good.bestQualityShop]),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                ),
+              ),
             ],
           ),
         ),
@@ -678,10 +845,8 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
     final state = context.read<AppState>();
     final categories = await state.watchReferenceCategories().first;
     final goods = await state.watchReferenceGoods().first;
-    final shops = goods.expand((good) => good.shopPrices.keys).toSet().toList()
-      ..sort();
     if (context.mounted && categories.isNotEmpty) {
-      await _editGood(context, categories, shops);
+      await _editGood(context, categories, goods);
     } else if (context.mounted) {
       await _addCategory(context);
     }
@@ -691,9 +856,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
     final state = context.read<AppState>();
     final categories = await state.watchReferenceCategories().first;
     final goods = await state.watchReferenceGoods().first;
-    final shops =
-        goods.expand((entry) => entry.shopPrices.keys).toSet().toList()..sort();
     if (!context.mounted) return;
-    await _editGood(context, categories, shops, good: good);
+    await _editGood(context, categories, goods, good: good);
   }
 }

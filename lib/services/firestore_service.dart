@@ -350,6 +350,19 @@ class FirestoreService {
     await _referenceCategoriesCol(uid).doc(category.id).set(category.toMap());
   }
 
+  Future<void> removeReferenceCategory(String uid, String categoryId) async {
+    final categories = _referenceCategoriesCol(uid);
+    final goods = await _referenceGoodsCol(uid)
+        .where('categoryId', isEqualTo: categoryId)
+        .get();
+    final batch = _db.batch();
+    batch.delete(categories.doc(categoryId));
+    for (final good in goods.docs) {
+      batch.delete(good.reference);
+    }
+    await batch.commit();
+  }
+
   Future<void> saveReferenceGood(String uid, ReferenceGood good) async {
     await _referenceGoodsCol(uid).doc(good.id).set(good.toMap());
   }
