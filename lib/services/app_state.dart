@@ -7,6 +7,8 @@ import '../models/note_item.dart';
 import '../models/saving_goal.dart';
 import '../models/spending_category.dart';
 import '../models/purchase_group.dart';
+import '../models/reference_category.dart';
+import '../models/reference_good.dart';
 import 'firestore_service.dart';
 import 'cycle_calculator.dart';
 
@@ -96,7 +98,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _applyCompletedCycleContributions(DateTime currentPeriodStart) async {
+  Future<void> _applyCompletedCycleContributions(
+      DateTime currentPeriodStart) async {
     final months = await _firestore.getAllMonths(_uid);
     final goals = await _firestore.getAllGoals(_uid);
     if (goals.isEmpty) return;
@@ -106,11 +109,14 @@ class AppState extends ChangeNotifier {
       final cycleEnd = _calculator.nextCycleStart(month.periodStart);
       if (cycleEnd.isAfter(currentPeriodStart)) continue;
 
-      final overspend = (month.totalSpent - month.allowedToSpend).clamp(0, double.infinity);
-      var availableSavings = (month.savingGoal - overspend).clamp(0, double.infinity).toDouble();
+      final overspend =
+          (month.totalSpent - month.allowedToSpend).clamp(0, double.infinity);
+      var availableSavings =
+          (month.savingGoal - overspend).clamp(0, double.infinity).toDouble();
 
       for (final goal in goals) {
-        if (goal.createdAt.isAfter(cycleEnd) || goal.processedCycleIds.contains(month.id)) continue;
+        if (goal.createdAt.isAfter(cycleEnd) ||
+            goal.processedCycleIds.contains(month.id)) continue;
 
         final credited = await _firestore.applyCycleGoalContribution(
           _uid,
@@ -118,14 +124,17 @@ class AppState extends ChangeNotifier {
           month.id,
           availableSavings,
         );
-        availableSavings = (availableSavings - credited).clamp(0, double.infinity).toDouble();
+        availableSavings =
+            (availableSavings - credited).clamp(0, double.infinity).toDouble();
       }
     }
   }
 
-  Future<void> updateSalaryAndSaving({double? salary, double? savingGoal}) async {
+  Future<void> updateSalaryAndSaving(
+      {double? salary, double? savingGoal}) async {
     if (currentMonth == null) return;
-    currentMonth = currentMonth!.copyWith(salary: salary, savingGoal: savingGoal);
+    currentMonth =
+        currentMonth!.copyWith(salary: salary, savingGoal: savingGoal);
     await _firestore.upsertMonth(_uid, currentMonth!);
     notifyListeners();
   }
@@ -160,7 +169,8 @@ class AppState extends ChangeNotifier {
   Future<void> updateExpenseItem(ExpenseItem item) async {
     if (currentMonth == null) return;
     await _firestore.updateItem(_uid, currentMonth!.id, item);
-    final index = currentMonth!.items.indexWhere((existing) => existing.id == item.id);
+    final index =
+        currentMonth!.items.indexWhere((existing) => existing.id == item.id);
     if (index >= 0) currentMonth!.items[index] = item;
     notifyListeners();
   }
@@ -183,7 +193,8 @@ class AppState extends ChangeNotifier {
     if (month == null) return;
     currentMonth = month.copyWith(
       categories: month.categories
-          .map((category) => category.id == updatedCategory.id ? updatedCategory : category)
+          .map((category) =>
+              category.id == updatedCategory.id ? updatedCategory : category)
           .toList(),
     );
     await _firestore.upsertMonth(_uid, currentMonth!);
@@ -200,7 +211,9 @@ class AppState extends ChangeNotifier {
         .toList();
     currentMonth = month.copyWith(
       items: updatedItems,
-      categories: month.categories.where((category) => category.id != categoryId).toList(),
+      categories: month.categories
+          .where((category) => category.id != categoryId)
+          .toList(),
     );
     await _firestore.upsertMonth(_uid, currentMonth!);
     notifyListeners();
@@ -211,7 +224,10 @@ class AppState extends ChangeNotifier {
     if (month == null) return;
 
     final categories = [...month.categories];
-    if (oldIndex < 0 || newIndex < 0 || oldIndex >= categories.length || newIndex >= categories.length) {
+    if (oldIndex < 0 ||
+        newIndex < 0 ||
+        oldIndex >= categories.length ||
+        newIndex >= categories.length) {
       return;
     }
 
@@ -256,11 +272,13 @@ class AppState extends ChangeNotifier {
     final month = currentMonth;
     if (month == null) return;
     final updatedItems = month.items
-        .map((item) => item.groupId == groupId ? item.copyWith(clearGroup: true) : item)
+        .map((item) =>
+            item.groupId == groupId ? item.copyWith(clearGroup: true) : item)
         .toList();
     currentMonth = month.copyWith(
       items: updatedItems,
-      purchaseGroups: month.purchaseGroups.where((group) => group.id != groupId).toList(),
+      purchaseGroups:
+          month.purchaseGroups.where((group) => group.id != groupId).toList(),
     );
     await _firestore.upsertMonth(_uid, currentMonth!);
     notifyListeners();
@@ -270,7 +288,8 @@ class AppState extends ChangeNotifier {
 
   // ---------- external (manually added) savings, e.g. gold, cash kept outside the app ----------
 
-  Stream<List<ExternalSaving>> watchExternalSavings() => _firestore.watchExternalSavings(_uid);
+  Stream<List<ExternalSaving>> watchExternalSavings() =>
+      _firestore.watchExternalSavings(_uid);
 
   Future<void> addExternalSaving(String title, double amount) async {
     final item = ExternalSaving(
@@ -298,7 +317,8 @@ class AppState extends ChangeNotifier {
 
   Stream<List<SavingGoal>> watchSavingGoals() => _firestore.watchGoals(_uid);
 
-  Stream<double> watchTotalGoalWithdrawals() => _firestore.watchTotalGoalWithdrawals(_uid);
+  Stream<double> watchTotalGoalWithdrawals() =>
+      _firestore.watchTotalGoalWithdrawals(_uid);
 
   Future<void> saveSavingGoal(SavingGoal goal) async {
     await _firestore.saveGoal(_uid, goal);
@@ -317,6 +337,47 @@ class AppState extends ChangeNotifier {
 
   Future<double> withdrawFromGoal(String goalId, double amount) =>
       _firestore.withdrawFromGoal(_uid, goalId, amount);
+
+  Stream<List<ReferenceCategory>> watchReferenceCategories() =>
+      _firestore.watchReferenceCategories(_uid);
+
+  Stream<List<ReferenceGood>> watchReferenceGoods() =>
+      _firestore.watchReferenceGoods(_uid);
+
+  Future<void> addReferenceCategory(String name) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) return;
+    await _firestore.saveReferenceCategory(
+      _uid,
+      ReferenceCategory(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        name: trimmedName,
+        createdAt: DateTime.now(),
+      ),
+    );
+  }
+
+  Future<void> saveReferenceGood({
+    String? id,
+    required String name,
+    required String categoryId,
+    required Map<String, double> shopPrices,
+  }) async {
+    final goodId = id ?? DateTime.now().microsecondsSinceEpoch.toString();
+    await _firestore.saveReferenceGood(
+      _uid,
+      ReferenceGood(
+        id: goodId,
+        name: name.trim(),
+        categoryId: categoryId,
+        shopPrices: shopPrices,
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  Future<void> removeReferenceGood(String id) =>
+      _firestore.removeReferenceGood(_uid, id);
 
   Future<void> updateMonthStartDay(int newStartDay) async {
     monthStartDay = newStartDay;

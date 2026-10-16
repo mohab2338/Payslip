@@ -94,22 +94,33 @@ does the actual building for you.
            allow read, write: if request.auth != null && request.auth.uid == userId;
          }
 
-             match /notes/{noteId} {
-                allow read, write: if request.auth != null && request.auth.uid == userId;
-             }
+         match /notes/{noteId} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+         }
+
+         match /goals/{goalId} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+         }
+
+         match /reference_categories/{categoryId} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+         }
+
+         match /reference_goods/{goodId} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+         }
        }
      }
    }
    ```
    Click **Publish**.
 
-   > **If you set up this project before the "Savings overview" page
-   > existed:** your Firestore rules are missing the `external_savings`
-   > and `notes` blocks above. Go back to **Firestore Database → Rules**,
-   > replace what's there with the full snippet above (it's safe to paste
-   > over — it includes the original `months` rule unchanged), and click
-   > **Publish** again. Without these rules, savings or notes may fail with
-   > a "permission denied" error.
+   > **If you set up this project before these features existed:** your
+   > Firestore rules may be missing one or more subcollection blocks above.
+   > Go to **Firestore Database → Rules**, add the missing blocks inside
+   > `match /users/{userId}`, and click **Publish**. Goods & prices needs
+   > both `reference_categories` and `reference_goods`; without them, the
+   > page will fail with a "permission denied" error.
 
 ---
 

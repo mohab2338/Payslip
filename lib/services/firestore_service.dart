@@ -4,6 +4,8 @@ import '../models/expense_item.dart';
 import '../models/external_saving.dart';
 import '../models/note_item.dart';
 import '../models/saving_goal.dart';
+import '../models/reference_category.dart';
+import '../models/reference_good.dart';
 
 /// All Firestore reads/writes live here.
 ///
@@ -12,6 +14,8 @@ import '../models/saving_goal.dart';
 ///   users/{uid}/months/{cycleId}           -> { periodStart, salary, savingGoal, items: [...] }
 ///   users/{uid}/external_savings/{itemId}  -> { id, title, amount, date }
 ///   users/{uid}/goals/{goalId}             -> named savings goals and progress
+///   users/{uid}/reference_categories/{categoryId} -> goods reference categories
+///   users/{uid}/reference_goods/{goodId}   -> goods and per-shop prices
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -30,9 +34,17 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> _goalsCol(String uid) =>
       _userDoc(uid).collection('goals');
 
+  CollectionReference<Map<String, dynamic>> _referenceCategoriesCol(
+          String uid) =>
+      _userDoc(uid).collection('reference_categories');
+
+  CollectionReference<Map<String, dynamic>> _referenceGoodsCol(String uid) =>
+      _userDoc(uid).collection('reference_goods');
+
   // ---------- user settings ----------
 
-  Future<void> saveUserSettings(String uid, {required int monthStartDay}) async {
+  Future<void> saveUserSettings(String uid,
+      {required int monthStartDay}) async {
     await _userDoc(uid).set({
       'monthStartDay': monthStartDay,
       'setupDone': true,
@@ -69,11 +81,13 @@ class FirestoreService {
     return _monthsCol(uid)
         .orderBy('periodStart', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => MonthData.fromMap(d.data())).toList());
+        .map((snap) =>
+            snap.docs.map((d) => MonthData.fromMap(d.data())).toList());
   }
 
   Future<List<MonthData>> getAllMonths(String uid) async {
-    final snap = await _monthsCol(uid).orderBy('periodStart', descending: true).get();
+    final snap =
+        await _monthsCol(uid).orderBy('periodStart', descending: true).get();
     return snap.docs.map((d) => MonthData.fromMap(d.data())).toList();
   }
 
@@ -90,7 +104,8 @@ class FirestoreService {
       final data = snapshot.data();
       if (data == null) return;
       final items = List<Map<String, dynamic>>.from(
-        (data['items'] as List<dynamic>? ?? []).map((value) => Map<String, dynamic>.from(value as Map)),
+        (data['items'] as List<dynamic>? ?? [])
+            .map((value) => Map<String, dynamic>.from(value as Map)),
       );
       items.removeWhere((value) => value['id'] == item.id);
       transaction.update(monthRef, {'items': items});
@@ -104,7 +119,8 @@ class FirestoreService {
       final data = snapshot.data();
       if (data == null) return;
       final items = List<Map<String, dynamic>>.from(
-        (data['items'] as List<dynamic>? ?? []).map((value) => Map<String, dynamic>.from(value as Map)),
+        (data['items'] as List<dynamic>? ?? [])
+            .map((value) => Map<String, dynamic>.from(value as Map)),
       );
       final index = items.indexWhere((value) => value['id'] == item.id);
       if (index < 0) return;
@@ -124,8 +140,11 @@ class FirestoreService {
   }
 
   Stream<List<ExternalSaving>> watchExternalSavings(String uid) {
-    return _externalSavingsCol(uid).orderBy('date', descending: true).snapshots().map(
-        (snap) => snap.docs.map((d) => ExternalSaving.fromMap(d.data())).toList());
+    return _externalSavingsCol(uid)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((d) => ExternalSaving.fromMap(d.data())).toList());
   }
 
   Future<void> saveNote(String uid, NoteItem note) async {
@@ -138,7 +157,8 @@ class FirestoreService {
 
   Stream<List<NoteItem>> watchNotes(String uid) {
     return _notesCol(uid).snapshots().map((snap) {
-      final notes = snap.docs.map((doc) => NoteItem.fromMap(doc.data())).toList();
+      final notes =
+          snap.docs.map((doc) => NoteItem.fromMap(doc.data())).toList();
       notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       return notes;
     });
@@ -146,13 +166,15 @@ class FirestoreService {
 
   // ---------- named saving goals ----------
 
-  Stream<List<SavingGoal>> watchGoals(String uid) => _goalsCol(uid)
-      .orderBy('createdAt')
-      .snapshots()
-      .map((snap) => snap.docs.map((doc) => SavingGoal.fromMap(doc.data())).toList());
+  Stream<List<SavingGoal>> watchGoals(String uid) =>
+      _goalsCol(uid).orderBy('createdAt').snapshots().map((snap) =>
+          snap.docs.map((doc) => SavingGoal.fromMap(doc.data())).toList());
 
-  Stream<double> watchTotalGoalWithdrawals(String uid) => _userDoc(uid).snapshots().map(
-        (snapshot) => (snapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0,
+  Stream<double> watchTotalGoalWithdrawals(String uid) => _userDoc(uid)
+      .snapshots()
+      .map(
+        (snapshot) =>
+            (snapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0,
       );
 
   Future<List<SavingGoal>> getAllGoals(String uid) async {
@@ -176,11 +198,16 @@ class FirestoreService {
       final isPending = goalData['status'] != SavingGoalStatus.achieved.name;
       final saved = (goalData['savedAmount'] as num? ?? 0).toDouble();
       final allocated =
-          (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
+          (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ??
+              0;
       if (isPending && saved > 0) {
-        transaction.set(userRef, {
-          'totalGoalWithdrawals': (allocated - saved).clamp(0, double.infinity),
-        }, SetOptions(merge: true));
+        transaction.set(
+            userRef,
+            {
+              'totalGoalWithdrawals':
+                  (allocated - saved).clamp(0, double.infinity),
+            },
+            SetOptions(merge: true));
       }
       transaction.delete(goalRef);
     });
@@ -191,35 +218,45 @@ class FirestoreService {
     await _db.runTransaction<void>((transaction) async {
       final snapshot = await transaction.get(goalRef);
       final data = snapshot.data();
-      if (data == null || data['status'] == SavingGoalStatus.achieved.name) return;
+      if (data == null || data['status'] == SavingGoalStatus.achieved.name)
+        return;
       transaction.update(goalRef, {'status': SavingGoalStatus.achieved.name});
     });
   }
 
-  Future<double> addManualGoalContribution(String uid, String goalId, double amount) async {
+  Future<double> addManualGoalContribution(
+      String uid, String goalId, double amount) async {
     final goalRef = _goalsCol(uid).doc(goalId);
     final userRef = _userDoc(uid);
     return _db.runTransaction<double>((transaction) async {
       final snapshot = await transaction.get(goalRef);
       final userSnapshot = await transaction.get(userRef);
       final data = snapshot.data();
-      if (data == null || data['status'] == SavingGoalStatus.achieved.name) return 0;
+      if (data == null || data['status'] == SavingGoalStatus.achieved.name)
+        return 0;
       final target = (data['targetAmount'] as num).toDouble();
       final saved = (data['savedAmount'] as num? ?? 0).toDouble();
-      final credited = amount.clamp(0, (target - saved).clamp(0, target)).toDouble();
+      final credited =
+          amount.clamp(0, (target - saved).clamp(0, target)).toDouble();
       if (credited > 0) {
         final priorAdjustments =
-            (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
+            (userSnapshot.data()?['totalGoalWithdrawals'] as num?)
+                    ?.toDouble() ??
+                0;
         transaction.update(goalRef, {'savedAmount': saved + credited});
-        transaction.set(userRef, {
-          'totalGoalWithdrawals': priorAdjustments + credited,
-        }, SetOptions(merge: true));
+        transaction.set(
+            userRef,
+            {
+              'totalGoalWithdrawals': priorAdjustments + credited,
+            },
+            SetOptions(merge: true));
       }
       return credited;
     });
   }
 
-  Future<double> withdrawFromGoal(String uid, String goalId, double amount) async {
+  Future<double> withdrawFromGoal(
+      String uid, String goalId, double amount) async {
     final goalRef = _goalsCol(uid).doc(goalId);
     final userRef = _userDoc(uid);
     return _db.runTransaction<double>((transaction) async {
@@ -233,11 +270,16 @@ class FirestoreService {
       final requested = amount.clamp(0, saved).toDouble();
       if (requested <= 0) return 0;
       final priorAllocated =
-          (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
+          (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ??
+              0;
       transaction.update(goalRef, {'savedAmount': saved - requested});
-      transaction.set(userRef, {
-        'totalGoalWithdrawals': (priorAllocated - requested).clamp(0, double.infinity),
-      }, SetOptions(merge: true));
+      transaction.set(
+          userRef,
+          {
+            'totalGoalWithdrawals':
+                (priorAllocated - requested).clamp(0, double.infinity),
+          },
+          SetOptions(merge: true));
       return requested;
     });
   }
@@ -254,8 +296,10 @@ class FirestoreService {
       final snapshot = await transaction.get(goalRef);
       final userSnapshot = await transaction.get(userRef);
       final data = snapshot.data();
-      if (data == null || data['status'] == SavingGoalStatus.achieved.name) return 0;
-      final processed = List<String>.from(data['processedCycleIds'] as List<dynamic>? ?? const []);
+      if (data == null || data['status'] == SavingGoalStatus.achieved.name)
+        return 0;
+      final processed = List<String>.from(
+          data['processedCycleIds'] as List<dynamic>? ?? const []);
       if (processed.contains(cycleId)) return 0;
 
       final target = (data['targetAmount'] as num).toDouble();
@@ -273,12 +317,44 @@ class FirestoreService {
       });
       if (credited > 0) {
         final priorAdjustments =
-            (userSnapshot.data()?['totalGoalWithdrawals'] as num?)?.toDouble() ?? 0;
-        transaction.set(userRef, {
-          'totalGoalWithdrawals': priorAdjustments + credited,
-        }, SetOptions(merge: true));
+            (userSnapshot.data()?['totalGoalWithdrawals'] as num?)
+                    ?.toDouble() ??
+                0;
+        transaction.set(
+            userRef,
+            {
+              'totalGoalWithdrawals': priorAdjustments + credited,
+            },
+            SetOptions(merge: true));
       }
       return credited;
     });
+  }
+
+  // ---------- reference goods and shop prices ----------
+
+  Stream<List<ReferenceCategory>> watchReferenceCategories(String uid) =>
+      _referenceCategoriesCol(uid).orderBy('name').snapshots().map((snapshot) =>
+          snapshot.docs
+              .map((doc) => ReferenceCategory.fromMap(doc.data()))
+              .toList());
+
+  Stream<List<ReferenceGood>> watchReferenceGoods(String uid) =>
+      _referenceGoodsCol(uid).orderBy('name').snapshots().map((snapshot) =>
+          snapshot.docs
+              .map((doc) => ReferenceGood.fromMap(doc.data()))
+              .toList());
+
+  Future<void> saveReferenceCategory(
+      String uid, ReferenceCategory category) async {
+    await _referenceCategoriesCol(uid).doc(category.id).set(category.toMap());
+  }
+
+  Future<void> saveReferenceGood(String uid, ReferenceGood good) async {
+    await _referenceGoodsCol(uid).doc(good.id).set(good.toMap());
+  }
+
+  Future<void> removeReferenceGood(String uid, String goodId) async {
+    await _referenceGoodsCol(uid).doc(goodId).delete();
   }
 }

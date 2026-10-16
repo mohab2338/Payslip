@@ -17,6 +17,7 @@ import 'settings_screen.dart';
 import 'notes_screen.dart';
 import 'goals_screen.dart';
 import 'category_detail_screen.dart';
+import 'goods_reference_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,7 +27,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
+  static final _currency =
+      NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
   bool _selectionMode = false;
   final Set<String> _selectedItemIds = {};
 
@@ -42,36 +44,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
   IconData _iconForCategoryName(String name) {
     final value = name.toLowerCase();
-    if (value.contains('food') || value.contains('grocer') || value.contains('restaurant')) {
+    if (value.contains('food') ||
+        value.contains('grocer') ||
+        value.contains('restaurant')) {
       return Icons.restaurant_outlined;
     }
-    if (value.contains('transport') || value.contains('car') || value.contains('fuel')) {
+    if (value.contains('transport') ||
+        value.contains('car') ||
+        value.contains('fuel')) {
       return Icons.directions_car_outlined;
     }
-    if (value.contains('shop') || value.contains('cloth') || value.contains('clothing')) {
+    if (value.contains('shop') ||
+        value.contains('cloth') ||
+        value.contains('clothing')) {
       return Icons.shopping_bag_outlined;
     }
-    if (value.contains('health') || value.contains('medical') || value.contains('pharmacy')) {
+    if (value.contains('health') ||
+        value.contains('medical') ||
+        value.contains('pharmacy')) {
       return Icons.favorite_border;
     }
-    if (value.contains('home') || value.contains('house') || value.contains('rent')) {
+    if (value.contains('home') ||
+        value.contains('house') ||
+        value.contains('rent')) {
       return Icons.home_outlined;
     }
-    if (value.contains('bill') || value.contains('utility') || value.contains('electric')) {
+    if (value.contains('bill') ||
+        value.contains('utility') ||
+        value.contains('electric')) {
       return Icons.receipt_long_outlined;
     }
-    if (value.contains('entertain') || value.contains('movie') || value.contains('game')) {
+    if (value.contains('entertain') ||
+        value.contains('movie') ||
+        value.contains('game')) {
       return Icons.movie_outlined;
     }
-    if (value.contains('education') || value.contains('school') || value.contains('book')) {
+    if (value.contains('education') ||
+        value.contains('school') ||
+        value.contains('book')) {
       return Icons.school_outlined;
     }
-    if (value.contains('travel') || value.contains('flight') || value.contains('holiday')) {
+    if (value.contains('travel') ||
+        value.contains('flight') ||
+        value.contains('holiday')) {
       return Icons.flight_outlined;
     }
     if (value.contains('pet')) return Icons.pets_outlined;
     if (value.contains('gift')) return Icons.card_giftcard_outlined;
-    if (value.contains('phone') || value.contains('internet') || value.contains('mobile')) {
+    if (value.contains('phone') ||
+        value.contains('internet') ||
+        value.contains('mobile')) {
       return Icons.wifi_outlined;
     }
     return Icons.category_outlined;
@@ -80,7 +102,8 @@ class _HomeScreenState extends State<HomeScreen> {
   (Color, Color, Color) _paletteForCategory(int index) =>
       _categoryPalettes[index % _categoryPalettes.length];
 
-  Future<void> _addBudgetCategory(BuildContext context, {SpendingCategory? category}) async {
+  Future<void> _addBudgetCategory(BuildContext context,
+      {SpendingCategory? category}) async {
     final month = context.read<AppState>().currentMonth;
     final otherBudgets = month?.categories
             .where((entry) => entry.id != category?.id)
@@ -95,7 +118,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final result = await showDialog<(String, double)>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(category == null ? 'Add spending category' : 'Edit spending category'),
+        title: Text(category == null
+            ? 'Add spending category'
+            : 'Edit spending category'),
         content: Form(
           key: formKey,
           child: Column(
@@ -105,12 +130,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: nameController,
                 autofocus: true,
                 decoration: const InputDecoration(labelText: 'Category name'),
-                validator: (value) => value == null || value.trim().isEmpty ? 'Enter a name' : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Enter a name'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: budgetController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Allowed amount',
                   prefixText: 'E£ ',
@@ -119,8 +147,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 validator: (value) {
                   final amount = double.tryParse(value?.trim() ?? '');
-                  if (amount == null || amount <= 0) return 'Enter a valid amount';
-                  if (amount > maxBudget) return 'Cannot exceed the remaining allowed spending';
+                  if (amount == null || amount <= 0)
+                    return 'Enter a valid amount';
+                  if (amount > maxBudget)
+                    return 'Cannot exceed the remaining allowed spending';
                   return null;
                 },
               ),
@@ -128,11 +158,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
-                Navigator.pop(dialogContext, (nameController.text.trim(), double.parse(budgetController.text.trim())));
+                Navigator.pop(dialogContext, (
+                  nameController.text.trim(),
+                  double.parse(budgetController.text.trim())
+                ));
               }
             },
             child: Text(category == null ? 'Add category' : 'Save changes'),
@@ -156,17 +191,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _deleteBudgetCategory(BuildContext context, SpendingCategory category) async {
+  Future<void> _deleteBudgetCategory(
+      BuildContext context, SpendingCategory category) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Delete ${category.name}?'),
-        content: const Text('Purchases in this category will become uncategorized.'),
+        content:
+            const Text('Purchases in this category will become uncategorized.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+            child:
+                const Text('Delete', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -189,7 +229,9 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: const InputDecoration(labelText: 'Group name'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
@@ -203,7 +245,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     controller.dispose();
     if (name != null && context.mounted) {
-      await context.read<AppState>().createPurchaseGroup(name, Set<String>.from(_selectedItemIds));
+      await context
+          .read<AppState>()
+          .createPurchaseGroup(name, Set<String>.from(_selectedItemIds));
       setState(() {
         _selectedItemIds.clear();
         _selectionMode = false;
@@ -228,7 +272,9 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Our Life'),
         actions: [
           IconButton(
-            tooltip: _selectionMode ? 'Finish selecting purchases' : 'Select purchases',
+            tooltip: _selectionMode
+                ? 'Finish selecting purchases'
+                : 'Select purchases',
             icon: Icon(_selectionMode ? Icons.close : Icons.checklist),
             onPressed: () => setState(() {
               _selectionMode = !_selectionMode;
@@ -239,10 +285,22 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'More',
             icon: const Icon(Icons.more_horiz),
             onSelected: (value) {
-              final page = value == 'goals' ? const GoalsScreen() : const NotesScreen();
+              final page = switch (value) {
+                'goals' => const GoalsScreen(),
+                'goods' => const GoodsReferenceScreen(),
+                _ => const NotesScreen(),
+              };
               Navigator.push(context, MaterialPageRoute(builder: (_) => page));
             },
             itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'goods',
+                child: ListTile(
+                  leading: Icon(Icons.price_change_outlined),
+                  title: Text('Goods & prices'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               PopupMenuItem(
                 value: 'goals',
                 child: ListTile(
@@ -322,20 +380,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const Text(
                             'Selected total',
-                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.textSecondary),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${_currency.format(selectedTotal)}  ·  ${_selectedItemIds.length} items',
-                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: _selectedItemIds.isEmpty ? null : () => _createPurchaseGroup(context),
-                      icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                      onPressed: _selectedItemIds.isEmpty
+                          ? null
+                          : () => _createPurchaseGroup(context),
+                      icon: const Icon(Icons.create_new_folder_outlined,
+                          size: 18),
                       label: const Text('Group'),
                     ),
                   ],
@@ -351,7 +414,8 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 'Cycle starting ${DateFormat.yMMMd().format(month.periodStart)}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 12),
 
@@ -365,7 +429,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Row(
                   children: [
-                    SpendRing(percentage: month.spentPercentage, size: 84, onDark: true),
+                    SpendRing(
+                        percentage: month.spentPercentage,
+                        size: 84,
+                        onDark: true),
                     const SizedBox(width: 18),
                     Expanded(
                       child: Column(
@@ -373,18 +440,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             'Allowed to spend',
-                            style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13),
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                                fontSize: 13),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             _currency.format(month.allowedToSpend),
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${_currency.format(month.totalSpent)} spent so far',
-                            style: TextStyle(color: AppColors.primaryLight, fontSize: 12),
+                            style: TextStyle(
+                                color: AppColors.primaryLight, fontSize: 12),
                           ),
                         ],
                       ),
@@ -422,7 +494,9 @@ class _HomeScreenState extends State<HomeScreen> {
               StatCard(
                 label: 'Remaining',
                 value: _currency.format(month.remaining),
-                valueColor: month.remaining < 0 ? AppColors.danger : AppColors.textPrimary,
+                valueColor: month.remaining < 0
+                    ? AppColors.danger
+                    : AppColors.textPrimary,
                 row: true,
               ),
 
@@ -431,7 +505,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Expanded(
                     child: Text('Spending categories',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                   TextButton.icon(
                     onPressed: () => _addBudgetCategory(context),
@@ -445,7 +520,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.only(bottom: 8),
                   child: Text(
                     'Create budget parts to divide your allowed spending.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style:
+                        TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   ),
                 )
               else
@@ -453,7 +529,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    for (int index = 0; index < month.categories.length; index++)
+                    for (int index = 0;
+                        index < month.categories.length;
+                        index++)
                       LongPressDraggable<SpendingCategory>(
                         data: month.categories[index],
                         delay: const Duration(milliseconds: 150),
@@ -462,7 +540,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Transform.scale(
                             scale: 1.02,
                             child: SizedBox(
-                              width: (MediaQuery.of(context).size.width - 68) / 2,
+                              width:
+                                  (MediaQuery.of(context).size.width - 68) / 2,
                               child: _buildCategoryCard(
                                 context,
                                 month,
@@ -486,10 +565,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             final draggedId = details.data.id;
                             final targetId = month.categories[index].id;
                             if (draggedId == targetId) return;
-                            final oldIndex = month.categories.indexWhere((category) => category.id == draggedId);
-                            final newIndex = month.categories.indexWhere((category) => category.id == targetId);
+                            final oldIndex = month.categories.indexWhere(
+                                (category) => category.id == draggedId);
+                            final newIndex = month.categories.indexWhere(
+                                (category) => category.id == targetId);
                             if (oldIndex >= 0 && newIndex >= 0) {
-                              context.read<AppState>().reorderSpendingCategories(oldIndex, newIndex);
+                              context
+                                  .read<AppState>()
+                                  .reorderSpendingCategories(
+                                      oldIndex, newIndex);
                             }
                           },
                           builder: (context, candidateData, rejectedData) {
@@ -508,10 +592,12 @@ class _HomeScreenState extends State<HomeScreen> {
               if (month.purchaseGroups.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Text('Purchase groups',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 ...month.purchaseGroups.map(
-                  (group) => _buildPurchaseGroupCard(context, state, month, group),
+                  (group) =>
+                      _buildPurchaseGroupCard(context, state, month, group),
                 ),
               ],
 
@@ -520,11 +606,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Expanded(
                     child: Text('Purchases this cycle',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                   if (_selectionMode)
                     Text('${_selectedItemIds.length} selected',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
               const SizedBox(height: 10),
@@ -533,7 +621,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Center(
-                    child: Text('No purchases yet. Tap "Add purchase" to log one.',
+                    child: Text(
+                        'No purchases yet. Tap "Add purchase" to log one.',
                         style: TextStyle(color: AppColors.textSecondary)),
                   ),
                 )
@@ -541,7 +630,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ...month.items.reversed.map((item) => Dismissible(
                       key: ValueKey(item.id),
                       direction: DismissDirection.endToStart,
-                      confirmDismiss: (_) => confirmDelete(context, itemLabel: item.title),
+                      confirmDismiss: (_) =>
+                          confirmDelete(context, itemLabel: item.title),
                       onDismissed: (_) {
                         _selectedItemIds.remove(item.id);
                         state.removeExpenseItem(item);
@@ -554,11 +644,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: AppColors.danger.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        child: const Icon(Icons.delete_outline, color: AppColors.danger),
+                        child: const Icon(Icons.delete_outline,
+                            color: AppColors.danger),
                       ),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8F8F6),
                           borderRadius: BorderRadius.circular(20),
@@ -576,19 +668,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   }
                                 }),
                               ),
-                              _purchaseIcon(month, item),
-                              const SizedBox(width: 12),
+                            _purchaseIcon(month, item),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(item.title,
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500)),
                                   const SizedBox(height: 2),
                                   Text(
-                                    DateFormat.yMMMd().add_jm().format(item.date),
+                                    DateFormat.yMMMd()
+                                        .add_jm()
+                                        .format(item.date),
                                     style: const TextStyle(
-                                        fontSize: 12, color: AppColors.textSecondary),
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary),
                                   ),
                                   if (item.note.isNotEmpty) ...[
                                     const SizedBox(height: 4),
@@ -597,7 +694,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                          fontSize: 12, color: AppColors.textSecondary),
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary),
                                     ),
                                   ],
                                 ],
@@ -605,29 +703,36 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             Text(
                               _currency.format(item.amount),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w700),
                             ),
                             IconButton(
                               tooltip: 'Edit purchase',
                               visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+                              constraints: const BoxConstraints.tightFor(
+                                  width: 36, height: 40),
                               padding: EdgeInsets.zero,
                               icon: const Icon(Icons.edit_outlined, size: 19),
                               onPressed: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => AddItemScreen(item: item)),
+                                MaterialPageRoute(
+                                    builder: (_) => AddItemScreen(item: item)),
                               ),
                             ),
                             IconButton(
-                              tooltip: item.note.isEmpty ? 'Add note' : 'Edit note',
+                              tooltip:
+                                  item.note.isEmpty ? 'Add note' : 'Edit note',
                               visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+                              constraints: const BoxConstraints.tightFor(
+                                  width: 36, height: 40),
                               padding: EdgeInsets.zero,
-                              icon: const Icon(Icons.note_add_outlined, size: 19),
+                              icon:
+                                  const Icon(Icons.note_add_outlined, size: 19),
                               onPressed: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => AddItemScreen(item: item, noteOnly: true),
+                                  builder: (_) =>
+                                      AddItemScreen(item: item, noteOnly: true),
                                 ),
                               ),
                             ),
@@ -663,84 +768,99 @@ class _HomeScreenState extends State<HomeScreen> {
       key: key,
       width: cardWidth,
       child: Container(
-        decoration: BoxDecoration(color: palette.$1, borderRadius: BorderRadius.circular(22)),
+        decoration: BoxDecoration(
+            color: palette.$1, borderRadius: BorderRadius.circular(22)),
         child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => CategoryDetailScreen(month: month, category: category)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(_iconForCategoryName(category.name), color: palette.$2, size: 21),
-                  const Spacer(),
-                  PopupMenuButton<String>(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    iconSize: 19,
-                    icon: Icon(Icons.more_horiz, color: palette.$2),
-                    onSelected: (action) {
-                      if (action == 'edit') _addBudgetCategory(context, category: category);
-                      if (action == 'delete') _deleteBudgetCategory(context, category);
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit category')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete category')),
-                    ],
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                category.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '${_currency.format(spent)} of ${_currency.format(category.budgetAmount)}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: palette.$2, fontSize: 11),
-              ),
-              const SizedBox(height: 7),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 5,
-                  backgroundColor: Colors.black.withOpacity(0.18),
-                  color: palette.$3,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${categoryItems.length} items · ${_currency.format(left)} left',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: palette.$2.withOpacity(0.95), fontSize: 10),
-              ),
-            ],
+          borderRadius: BorderRadius.circular(22),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) =>
+                    CategoryDetailScreen(month: month, category: category)),
           ),
-        ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(_iconForCategoryName(category.name),
+                        color: palette.$2, size: 21),
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
+                      iconSize: 19,
+                      icon: Icon(Icons.more_horiz, color: palette.$2),
+                      onSelected: (action) {
+                        if (action == 'edit')
+                          _addBudgetCategory(context, category: category);
+                        if (action == 'delete')
+                          _deleteBudgetCategory(context, category);
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                            value: 'edit', child: Text('Edit category')),
+                        PopupMenuItem(
+                            value: 'delete', child: Text('Delete category')),
+                      ],
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  category.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_currency.format(spent)} of ${_currency.format(category.budgetAmount)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: palette.$2, fontSize: 11),
+                ),
+                const SizedBox(height: 7),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 5,
+                    backgroundColor: Colors.black.withOpacity(0.18),
+                    color: palette.$3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${categoryItems.length} items · ${_currency.format(left)} left',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: palette.$2.withOpacity(0.95), fontSize: 10),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _purchaseIcon(MonthData month, ExpenseItem item) {
-    final categoryIndex = month.categories.indexWhere((category) => category.id == item.categoryId);
+    final categoryIndex = month.categories
+        .indexWhere((category) => category.id == item.categoryId);
     if (categoryIndex < 0) {
       return const CircleAvatar(
         radius: 21,
         backgroundColor: Color(0xFFE4F3EF),
-        child: Icon(Icons.shopping_bag_outlined, size: 20, color: AppColors.accent),
+        child: Icon(Icons.shopping_bag_outlined,
+            size: 20, color: AppColors.accent),
       );
     }
     final category = month.categories[categoryIndex];
@@ -748,7 +868,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return CircleAvatar(
       radius: 21,
       backgroundColor: palette.$2.withOpacity(0.42),
-      child: Icon(_iconForCategoryName(category.name), size: 20, color: palette.$1),
+      child: Icon(_iconForCategoryName(category.name),
+          size: 20, color: palette.$1),
     );
   }
 
@@ -780,30 +901,35 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+            color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
         child: ExpansionTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        leading: const Icon(Icons.folder_outlined, color: AppColors.primary),
-        title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${groupedItems.length} purchases'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_currency.format(total), style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(width: 8),
-            const Icon(Icons.expand_more),
-          ],
-        ),
-        children: groupedItems.isEmpty
-            ? [const ListTile(title: Text('No purchases in this group.'))]
-            : groupedItems
-                .map((item) => ListTile(
-                      dense: true,
-                      title: Text(item.title),
-                      trailing: Text(_currency.format(item.amount)),
-                    ))
-                .toList(),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          collapsedShape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          leading: const Icon(Icons.folder_outlined, color: AppColors.primary),
+          title: Text(group.name,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text('${groupedItems.length} purchases'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_currency.format(total),
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(width: 8),
+              const Icon(Icons.expand_more),
+            ],
+          ),
+          children: groupedItems.isEmpty
+              ? [const ListTile(title: Text('No purchases in this group.'))]
+              : groupedItems
+                  .map((item) => ListTile(
+                        dense: true,
+                        title: Text(item.title),
+                        trailing: Text(_currency.format(item.amount)),
+                      ))
+                  .toList(),
         ),
       ),
     );
