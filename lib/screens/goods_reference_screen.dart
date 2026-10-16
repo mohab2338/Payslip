@@ -51,7 +51,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
               child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-              if (formKey.currentState!.validate()) {
+              if (formKey.currentState?.validate() == true) {
                 Navigator.pop(dialogContext, controller.text.trim());
               }
             },
@@ -198,8 +198,8 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
           .where((entry) => entry.categoryId == categoryId)
           .expand((entry) => entry.shopPrices.keys)
           .toSet();
-      if (good?.categoryId == categoryId) {
-        shops.addAll(good!.shopPrices.keys);
+      if (good != null && good.categoryId == categoryId) {
+        shops.addAll(good.shopPrices.keys);
       }
       for (final shop in shopControllers.keys.toList()) {
         if (!shops.contains(shop)) {
@@ -402,7 +402,7 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                   child: const Text('Cancel')),
               ElevatedButton(
                 onPressed: () {
-                  if (!formKey.currentState!.validate()) return;
+                  if (formKey.currentState?.validate() != true) return;
                   final enteredPrices = shopControllers.values
                       .where((controller) => controller.text.trim().isNotEmpty)
                       .toList();
