@@ -473,10 +473,10 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
             icon: const Icon(Icons.category_outlined),
             onPressed: () => _manageCategories(context),
           ),
-          IconButton(
-            tooltip: 'Add good',
-            icon: const Icon(Icons.add),
+          TextButton.icon(
             onPressed: () => _openAddGood(context),
+            icon: const Icon(Icons.add),
+            label: const Text('Add good'),
           ),
         ],
       ),
@@ -843,12 +843,17 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
 
   Future<void> _openAddGood(BuildContext context) async {
     final state = context.read<AppState>();
-    final categories = await state.watchReferenceCategories().first;
-    final goods = await state.watchReferenceGoods().first;
-    if (context.mounted && categories.isNotEmpty) {
-      await _editGood(context, categories, goods);
-    } else if (context.mounted) {
+    var categories = await state.watchReferenceCategories().first;
+    if (!context.mounted) return;
+    if (categories.isEmpty) {
       await _addCategory(context);
+      if (!context.mounted) return;
+      categories = await state.watchReferenceCategories().first;
+    }
+    if (categories.isEmpty) return;
+    final goods = await state.watchReferenceGoods().first;
+    if (context.mounted) {
+      await _editGood(context, categories, goods);
     }
   }
 
