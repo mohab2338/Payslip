@@ -129,7 +129,7 @@ class CategorySpendChart extends StatelessWidget {
                         barTouchData: BarTouchData(
                           handleBuiltInTouches: false,
                           touchTooltipData: BarTouchTooltipData(
-                            tooltipBgColor: AppColors.primary,
+                            getTooltipColor: (_) => AppColors.primary,
                             tooltipRoundedRadius: 10,
                             getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                                 BarTooltipItem(
