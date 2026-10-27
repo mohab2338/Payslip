@@ -8,9 +8,24 @@ import '../services/app_state.dart';
 import '../services/export_service.dart';
 import '../theme.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/category_spend_chart.dart';
 import '../widgets/spend_ring.dart';
 import '../widgets/stat_card.dart';
 import 'add_item_screen.dart';
+
+class _CategorySpend {
+  final String? categoryId;
+  final String name;
+  final double total;
+  final Color color;
+
+  const _CategorySpend({
+    required this.categoryId,
+    required this.name,
+    required this.total,
+    required this.color,
+  });
+}
 
 class MonthDetailScreen extends StatefulWidget {
   final MonthData month;
@@ -18,14 +33,6 @@ class MonthDetailScreen extends StatefulWidget {
 
   @override
   State<MonthDetailScreen> createState() => _MonthDetailScreenState();
-}
-
-class _CategorySpend {
-  final String name;
-  final double total;
-  final Color color;
-
-  const _CategorySpend({required this.name, required this.total, required this.color});
 }
 
 class _MonthDetailScreenState extends State<MonthDetailScreen> {
@@ -87,6 +94,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
       final total = totalsByCategory[category.id] ?? 0;
       if (total > 0) {
         categoryEntries.add(_CategorySpend(
+          categoryId: category.id,
           name: category.name,
           total: total,
           color: _chartColors[i % _chartColors.length],
@@ -97,6 +105,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
     final uncategorizedTotal = totalsByCategory[null] ?? 0;
     if (uncategorizedTotal > 0) {
       categoryEntries.add(_CategorySpend(
+        categoryId: null,
         name: 'Uncategorized',
         total: uncategorizedTotal,
         color: const Color(0xFF9AA0A6),
@@ -109,19 +118,6 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
 
   Widget _buildSpendingCharts(MonthData month) {
     final breakdown = _buildCategoryBreakdown(month);
-    if (breakdown.isEmpty || month.totalSpent <= 0) {
-      return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: const Center(
-          child: Text('No spending data for charts yet.'),
-        ),
-      );
-    }
-
     final pieSections = breakdown.map((bucket) {
       final pct = (bucket.total / month.totalSpent) * 100;
       return PieChartSectionData(
@@ -201,72 +197,6 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
             ],
           ),
           const SizedBox(height: 18),
-          const Text(
-            'Cycle spend by part',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 200,
-            child: BarChart(
-              BarChartData(
-                maxY: breakdown
-                    .map((bucket) => bucket.total)
-                    .reduce((a, b) => a > b ? a : b)
-                    .clamp(1.0, double.infinity)
-                    .toDouble(),
-                gridData: FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 38,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        if (index < 0 || index >= breakdown.length) {
-                          return const SizedBox();
-                        }
-                        final bucket = breakdown[index];
-                        final label = bucket.name.length > 10
-                            ? '${bucket.name.substring(0, 10)}…'
-                            : bucket.name;
-                        return Transform.rotate(
-                          angle: -0.7,
-                          child: Text(
-                            label,
-                            style: const TextStyle(fontSize: 10),
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                barGroups: breakdown.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final bucket = entry.value;
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: bucket.total,
-                        color: bucket.color,
-                        width: 16,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(8),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -382,6 +312,9 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                         child: StatCard(
                           label: 'Saving goal',
                           value: _currency.format(month.savingGoal),
+                          fillColor: AppColors.accentLight,
+                          labelColor: AppColors.accent,
+                          valueColor: AppColors.accent,
                         ),
                       ),
                     ],
@@ -396,9 +329,11 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                         child: StatCard(
                           label: 'Actual saved',
                           value: _currency.format(month.actualSaved),
-                          valueColor: month.actualSaved < 0
+                          fillColor: month.actualSaved < 0
                               ? AppColors.danger
-                              : AppColors.textPrimary,
+                              : AppColors.accent,
+                          labelColor: Colors.white.withOpacity(0.8),
+                          valueColor: Colors.white,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -413,6 +348,11 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                 ),
                 const SizedBox(height: 10),
                 _buildSpendingCharts(month),
+                const SizedBox(height: 10),
+                CategorySpendChart(
+                  month: month,
+                  title: 'Cycle spend by part',
+                ),
                 const SizedBox(height: 24),
                 const Text(
                   'Purchases',

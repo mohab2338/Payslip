@@ -8,6 +8,7 @@ import '../models/month_data.dart';
 import '../models/purchase_group.dart';
 import '../theme.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/category_spend_chart.dart';
 import '../widgets/spend_ring.dart';
 import '../widgets/stat_card.dart';
 import 'add_item_screen.dart';
@@ -483,6 +484,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: StatCard(
                         label: 'Saving goal',
                         value: _currency.format(month.savingGoal),
+                        fillColor: AppColors.accentLight,
+                        labelColor: AppColors.accent,
+                        valueColor: AppColors.accent,
                       ),
                     ),
                   ],
@@ -492,9 +496,11 @@ class _HomeScreenState extends State<HomeScreen> {
               StatCard(
                 label: 'Actual saved',
                 value: _currency.format(month.actualSaved),
-                valueColor: month.actualSaved < 0
+                fillColor: month.actualSaved < 0
                     ? AppColors.danger
-                    : AppColors.textPrimary,
+                    : AppColors.accent,
+                labelColor: Colors.white.withOpacity(0.8),
+                valueColor: Colors.white,
                 row: true,
               ),
               const SizedBox(height: 10),
@@ -507,6 +513,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? AppColors.danger
                     : AppColors.textPrimary,
                 row: true,
+              ),
+
+              const SizedBox(height: 24),
+              CategorySpendChart(
+                month: month,
+                title: 'Current cycle spend by part',
               ),
 
               const SizedBox(height: 24),
