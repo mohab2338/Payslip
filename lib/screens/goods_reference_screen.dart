@@ -17,9 +17,16 @@ class GoodsReferenceScreen extends StatefulWidget {
 class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
   static final _currency =
       NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
+  final TextEditingController _searchController = TextEditingController();
   String? _selectedCategoryId;
   List<ReferenceCategory> _loadedCategories = const [];
   List<ReferenceGood> _loadedGoods = const [];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _addCategory(BuildContext context) async {
     await _editCategory(context);
@@ -506,11 +513,20 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                   return const Center(child: CircularProgressIndicator());
                 final goods = goodsSnapshot.data!;
                 _loadedGoods = goods;
-                final visibleGoods = _selectedCategoryId == null
-                    ? goods
-                    : goods
-                        .where((good) => good.categoryId == _selectedCategoryId)
-                        .toList();
+                final searchQuery = _searchController.text.trim().toLowerCase();
+                final visibleGoods = goods.where((good) {
+                  if (_selectedCategoryId != null &&
+                      good.categoryId != _selectedCategoryId) {
+                    return false;
+                  }
+                  if (searchQuery.isEmpty) {
+                    return true;
+                  }
+                  final searchableText = [good.name, ...good.shopPrices.keys]
+                      .join(' ')
+                      .toLowerCase();
+                  return searchableText.contains(searchQuery);
+                }).toList();
                 final categoryOrder = {
                   for (var i = 0; i < categories.length; i++)
                     categories[i].id: i
@@ -527,27 +543,57 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Row(
+                      child: Column(
                         children: [
-                          const Text('Show:',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: DropdownButtonFormField<String?>(
-                              initialValue: _selectedCategoryId,
-                              decoration: const InputDecoration(
-                                  isDense: true, labelText: 'Category'),
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                    value: null, child: Text('All categories')),
-                                ...categories.map((category) =>
-                                    DropdownMenuItem<String?>(
-                                        value: category.id,
-                                        child: Text(category.name))),
-                              ],
-                              onChanged: (value) =>
-                                  setState(() => _selectedCategoryId = value),
+                          TextField(
+                            controller: _searchController,
+                            textInputAction: TextInputAction.search,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: 'Search goods',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: _searchController.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'Clear search',
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {});
+                                      },
+                                      icon: const Icon(Icons.clear),
+                                    ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Text('Show:',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: DropdownButtonFormField<String?>(
+                                  initialValue: _selectedCategoryId,
+                                  decoration: const InputDecoration(
+                                      isDense: true, labelText: 'Category'),
+                                  items: [
+                                    const DropdownMenuItem<String?>(
+                                        value: null,
+                                        child: Text('All categories')),
+                                    ...categories.map((category) =>
+                                        DropdownMenuItem<String?>(
+                                            value: category.id,
+                                            child: Text(category.name))),
+                                  ],
+                                  onChanged: (value) =>
+                                      setState(() => _selectedCategoryId = value),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -600,9 +646,11 @@ class _GoodsReferenceScreenState extends State<GoodsReferenceScreen> {
                   size: 42, color: AppColors.textSecondary),
               const SizedBox(height: 12),
               Text(
-                  _selectedCategoryId == null
-                      ? 'No goods saved yet.'
-                      : 'No goods in this category yet.',
+                  _searchController.text.trim().isNotEmpty
+                      ? 'No goods match your search.'
+                      : _selectedCategoryId == null
+                          ? 'No goods saved yet.'
+                          : 'No goods in this category yet.',
                   textAlign: TextAlign.center),
               const SizedBox(height: 12),
               ElevatedButton.icon(
