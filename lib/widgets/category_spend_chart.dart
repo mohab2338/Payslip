@@ -25,6 +25,8 @@ class CategorySpendChart extends StatelessWidget {
   ];
 
   static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
+  static final _axisCurrency =
+      NumberFormat.compactCurrency(symbol: 'E£', decimalDigits: 0);
 
   @override
   Widget build(BuildContext context) {
@@ -84,13 +86,6 @@ class CategorySpendChart extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12, color: AppColors.textSecondary),
           ),
-          if (entries.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            const Text(
-              'Bar lengths are relative to the highest-spend part',
-              style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-            ),
-          ],
           if (entries.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 28),
@@ -110,54 +105,48 @@ class CategorySpendChart extends StatelessWidget {
   ) {
     final maxAmount =
         entries.map((entry) => entry.total).reduce((a, b) => a > b ? a : b);
-
-    return entries.map((entry) {
-      final fraction = entry.total / maxAmount;
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    entry.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _currency.format(entry.total),
-                  textAlign: TextAlign.right,
+    return [
+      for (final entry in entries)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 13),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 68,
+                child: Text(
+                  entry.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    fontSize: 10,
+                    height: 1.15,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            LayoutBuilder(
-              builder: (context, constraints) => ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  height: 10,
-                  child: Stack(
-                    children: [
-                      const Positioned.fill(
-                        child: ColoredBox(color: AppColors.divider),
-                      ),
-                      FractionallySizedBox(
-                        widthFactor: fraction,
-                        child: DecoratedBox(
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SizedBox(
+                    height: 22,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Positioned.fill(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(
+                              5,
+                              (_) => Container(
+                                width: 1,
+                                color: AppColors.divider.withOpacity(0.8),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: constraints.maxWidth * entry.total / maxAmount,
+                          height: 14,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
@@ -165,17 +154,54 @@ class CategorySpendChart extends StatelessWidget {
                                 entry.color,
                               ],
                             ),
+                            borderRadius: BorderRadius.circular(7),
+                            boxShadow: [
+                              BoxShadow(
+                                color: entry.color.withOpacity(0.18),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 78,
+                child: Text(
+                  _currency.format(entry.total),
+                  maxLines: 1,
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      );
-    }).toList();
+      Padding(
+        padding: const EdgeInsets.only(left: 76, right: 86),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(
+            5,
+            (index) => Text(
+              _axisCurrency.format(maxAmount * index / 4),
+              style: const TextStyle(
+                fontSize: 8,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ];
   }
 }
