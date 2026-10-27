@@ -96,136 +96,136 @@ class CategorySpendChart extends StatelessWidget {
             const SizedBox(height: 10),
             LayoutBuilder(
               builder: (context, constraints) {
-                final minChartWidth = entries.length * 80.0 + 48;
-                final chartWidth = constraints.maxWidth > minChartWidth
-                    ? constraints.maxWidth
-                    : minChartWidth;
                 final maxAmount = entries
                     .map((entry) => entry.total)
                     .reduce((a, b) => a > b ? a : b);
                 final chartMax = maxAmount * 1.28;
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: chartWidth,
-                    height: 238,
-                    child: BarChart(
-                      BarChartData(
-                        minY: 0,
-                        maxY: chartMax,
-                        alignment: BarChartAlignment.spaceAround,
-                        groupsSpace: 18,
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: chartMax / 4,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                            color: AppColors.divider.withOpacity(0.7),
-                            strokeWidth: 1,
-                            dashArray: [4, 4],
-                          ),
+                final groupWidth =
+                    (constraints.maxWidth - 48) / entries.length;
+                final barWidth =
+                    (groupWidth * 0.48).clamp(8.0, 24.0).toDouble();
+                return SizedBox(
+                  width: constraints.maxWidth,
+                  height: 246,
+                  child: BarChart(
+                    BarChartData(
+                      minY: 0,
+                      maxY: chartMax,
+                      alignment: BarChartAlignment.spaceAround,
+                      groupsSpace: 4,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: chartMax / 4,
+                        getDrawingHorizontalLine: (_) => FlLine(
+                          color: AppColors.divider.withOpacity(0.7),
+                          strokeWidth: 1,
+                          dashArray: [4, 4],
                         ),
-                        borderData: FlBorderData(show: false),
-                        barTouchData: BarTouchData(
-                          handleBuiltInTouches: false,
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipColor: (_) => AppColors.primary,
-                            tooltipRoundedRadius: 10,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                                BarTooltipItem(
-                              _axisCurrency.format(rod.toY),
-                              const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      barTouchData: BarTouchData(
+                        handleBuiltInTouches: false,
+                        touchTooltipData: BarTouchTooltipData(
+                          getTooltipColor: (_) => AppColors.primary,
+                          tooltipRoundedRadius: 10,
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                              BarTooltipItem(
+                            _axisCurrency.format(rod.toY),
+                            const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                        titlesData: FlTitlesData(
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 48,
-                              interval: chartMax / 4,
-                              getTitlesWidget: (value, meta) {
-                                if (value <= 0 || value > maxAmount) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 4),
-                                  child: Text(
-                                    _axisCurrency.format(value),
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    textAlign: TextAlign.right,
+                      ),
+                      titlesData: FlTitlesData(
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 48,
+                            interval: chartMax / 4,
+                            getTitlesWidget: (value, meta) {
+                              if (value <= 0 || value > maxAmount) {
+                                return const SizedBox.shrink();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: Text(
+                                  _axisCurrency.format(value),
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: AppColors.textSecondary,
                                   ),
-                                );
-                              },
-                            ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              );
+                            },
                           ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 36,
-                              getTitlesWidget: (value, meta) {
-                                final index = value.toInt();
-                                if (index < 0 || index >= entries.length) {
-                                  return const SizedBox.shrink();
-                                }
-                                final name = entries[index].name;
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 42,
+                            getTitlesWidget: (value, meta) {
+                              final index = value.toInt();
+                              if (index < 0 || index >= entries.length) {
+                                return const SizedBox.shrink();
+                              }
+                              final name = entries[index].name;
+                              return SizedBox(
+                                width: groupWidth,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 6),
                                   child: Text(
-                                    name.length > 10
-                                        ? '${name.substring(0, 9)}…'
-                                        : name,
-                                    maxLines: 1,
+                                    name,
+                                    maxLines: 2,
+                                    textAlign: TextAlign.center,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 9,
+                                      height: 1.1,
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                        barGroups: entries.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final category = entry.value;
-                          return BarChartGroupData(
-                            x: index,
-                            showingTooltipIndicators: const [0],
-                            barRods: [
-                              BarChartRodData(
-                                toY: category.total,
-                                width: 26,
-                                gradient: LinearGradient(
-                                  begin: Alignment.bottomCenter,
-                                  end: Alignment.topCenter,
-                                  colors: [
-                                    category.color.withOpacity(0.72),
-                                    category.color,
-                                  ],
-                                ),
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(8),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
                       ),
+                      barGroups: entries.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final category = entry.value;
+                        return BarChartGroupData(
+                          x: index,
+                          showingTooltipIndicators: const [0],
+                          barRods: [
+                            BarChartRodData(
+                              toY: category.total,
+                              width: barWidth,
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  category.color.withOpacity(0.72),
+                                  category.color,
+                                ],
+                              ),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(8),
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
                     ),
                   ),
                 );
