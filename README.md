@@ -1,6 +1,6 @@
 # Our Life (Flutter + Firebase)
 
-Track your salary, a savings goal, and every purchase within a pay cycle that
+Tofcourserack your salary, a savings goal, and every purchase within a pay cycle that
 starts on whatever day you choose — not a fixed calendar month. Data lives in
 Firebase (Auth + Firestore), so your history follows you across devices, and
 you can export any past month as a CSV.

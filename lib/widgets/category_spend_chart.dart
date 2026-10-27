@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -26,8 +25,6 @@ class CategorySpendChart extends StatelessWidget {
   ];
 
   static final _currency = NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
-  static final _axisCurrency =
-      NumberFormat.compactCurrency(symbol: 'E£', decimalDigits: 0);
 
   @override
   Widget build(BuildContext context) {
@@ -87,153 +84,98 @@ class CategorySpendChart extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12, color: AppColors.textSecondary),
           ),
+          if (entries.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            const Text(
+              'Bar lengths are relative to the highest-spend part',
+              style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+            ),
+          ],
           if (entries.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 28),
               child: Center(child: Text('No spending data for this cycle yet.')),
             )
           else ...[
-            const SizedBox(height: 10),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final maxAmount = entries
-                    .map((entry) => entry.total)
-                    .reduce((a, b) => a > b ? a : b);
-                final chartMax = maxAmount * 1.28;
-                final groupWidth =
-                    (constraints.maxWidth - 48) / entries.length;
-                final barWidth =
-                    (groupWidth * 0.48).clamp(8.0, 24.0).toDouble();
-                return SizedBox(
-                  width: constraints.maxWidth,
-                  height: 246,
-                  child: BarChart(
-                    BarChartData(
-                      minY: 0,
-                      maxY: chartMax,
-                      alignment: BarChartAlignment.spaceAround,
-                      groupsSpace: 4,
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: chartMax / 4,
-                        getDrawingHorizontalLine: (_) => FlLine(
-                          color: AppColors.divider.withOpacity(0.7),
-                          strokeWidth: 1,
-                          dashArray: [4, 4],
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      barTouchData: BarTouchData(
-                        handleBuiltInTouches: false,
-                        touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (_) => AppColors.primary,
-                          tooltipRoundedRadius: 10,
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                              BarTooltipItem(
-                            _axisCurrency.format(rod.toY),
-                            const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      titlesData: FlTitlesData(
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 48,
-                            interval: chartMax / 4,
-                            getTitlesWidget: (value, meta) {
-                              if (value <= 0 || value > maxAmount) {
-                                return const SizedBox.shrink();
-                              }
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: Text(
-                                  _axisCurrency.format(value),
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 42,
-                            getTitlesWidget: (value, meta) {
-                              final index = value.toInt();
-                              if (index < 0 || index >= entries.length) {
-                                return const SizedBox.shrink();
-                              }
-                              final name = entries[index].name;
-                              return SizedBox(
-                                width: groupWidth,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 6),
-                                  child: Text(
-                                    name,
-                                    maxLines: 2,
-                                    textAlign: TextAlign.center,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      height: 1.1,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      barGroups: entries.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final category = entry.value;
-                        return BarChartGroupData(
-                          x: index,
-                          showingTooltipIndicators: const [0],
-                          barRods: [
-                            BarChartRodData(
-                              toY: category.total,
-                              width: barWidth,
-                              gradient: LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: [
-                                  category.color.withOpacity(0.72),
-                                  category.color,
-                                ],
-                              ),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(8),
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                );
-              },
-            ),
+            const SizedBox(height: 14),
+            ..._buildAmountBars(entries),
           ],
         ],
       ),
     );
+  }
+
+  List<Widget> _buildAmountBars(
+    List<({String name, double total, Color color})> entries,
+  ) {
+    final maxAmount =
+        entries.map((entry) => entry.total).reduce((a, b) => a > b ? a : b);
+
+    return entries.map((entry) {
+      final fraction = entry.total / maxAmount;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _currency.format(entry.total),
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            LayoutBuilder(
+              builder: (context, constraints) => ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  height: 10,
+                  child: Stack(
+                    children: [
+                      const Positioned.fill(
+                        child: ColoredBox(color: AppColors.divider),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: fraction,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                entry.color.withOpacity(0.72),
+                                entry.color,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 }
