@@ -11,8 +11,10 @@ you can export any past month as a CSV.
 - Light, modern UI (Poppins font, soft cards, progress ring)
 - Enter salary + savings target → app shows what you're "allowed to spend"
 - Log purchases; see amount spent so far and spent-percentage of your allowance
+- Compare your saving goal with actual savings after all spending
 - Custom cycle start day (e.g. the 25th of each month, not the 1st)
-- Full history of previous cycles, stored in Firestore
+- Full history of previous cycles, with editable purchases and spending charts
+  by category
 - Export any month's data (salary, saving goal, items) as a CSV file to share
 
 ---

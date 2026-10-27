@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/expense_item.dart';
+import '../models/month_data.dart';
+import '../models/spending_category.dart';
 import '../services/app_state.dart';
 
 class AddItemScreen extends StatefulWidget {
   final ExpenseItem? item;
+  final MonthData? month;
   final bool noteOnly;
 
-  const AddItemScreen({super.key, this.item, this.noteOnly = false});
+  const AddItemScreen({
+    super.key,
+    this.item,
+    this.month,
+    this.noteOnly = false,
+  });
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -37,25 +45,37 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     final state = context.read<AppState>();
-    final categories = state.currentMonth?.categories ?? [];
+    final month = widget.month ?? state.currentMonth;
+    final categories = month?.categories ?? const <SpendingCategory>[];
     final selectedCategoryId = categories.any((category) => category.id == _categoryId)
-      ? _categoryId
-      : null;
+        ? _categoryId
+        : null;
+
     if (widget.item == null) {
-      await state.addExpenseItem(
+      if (month == null) {
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+      await state.addExpenseItemToMonth(
+        month.id,
         _titleCtrl.text.trim(),
         double.parse(_amountCtrl.text),
         note: _noteCtrl.text.trim(),
         categoryId: selectedCategoryId,
       );
     } else {
-      await state.updateExpenseItem(widget.item!.copyWith(
+      final updatedItem = widget.item!.copyWith(
         title: widget.noteOnly ? null : _titleCtrl.text.trim(),
         amount: widget.noteOnly ? null : double.parse(_amountCtrl.text),
         note: _noteCtrl.text.trim(),
         categoryId: widget.noteOnly ? null : selectedCategoryId,
         clearCategory: !widget.noteOnly && selectedCategoryId == null,
-      ));
+      );
+      if (month == null) {
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+      await state.updateExpenseItemInMonth(month.id, updatedItem);
     }
     if (mounted) Navigator.pop(context);
   }
@@ -70,12 +90,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = context.watch<AppState>().currentMonth?.categories ?? [];
+    final month = widget.month ?? context.watch<AppState>().currentMonth;
+    final categories = month?.categories ?? const <SpendingCategory>[];
     final hasCurrentCategory = categories.any((category) => category.id == _categoryId);
     final dropdownCategoryId = hasCurrentCategory ? _categoryId! : '';
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.noteOnly ? 'Purchase note' : widget.item == null ? 'Add purchase' : 'Edit purchase'),
+        title: Text(
+          widget.noteOnly
+              ? 'Purchase note'
+              : widget.item == null
+                  ? 'Add purchase'
+                  : 'Edit purchase',
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -85,29 +112,33 @@ class _AddItemScreenState extends State<AddItemScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (!widget.noteOnly) TextFormField(
-                  controller: _titleCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'What did you buy?',
-                    prefixIcon: Icon(Icons.shopping_bag_outlined),
+                if (!widget.noteOnly)
+                  TextFormField(
+                    controller: _titleCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'What did you buy?',
+                      prefixIcon: Icon(Icons.shopping_bag_outlined),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
                 if (!widget.noteOnly) const SizedBox(height: 14),
-                if (!widget.noteOnly) TextFormField(
-                  controller: _amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
-                    prefixText: 'E£ ',
+                if (!widget.noteOnly)
+                  TextFormField(
+                    controller: _amountCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      prefixText: 'E£ ',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Required';
+                      final n = double.tryParse(v);
+                      if (n == null || n <= 0) return 'Enter a valid amount';
+                      return null;
+                    },
                   ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
-                    final n = double.tryParse(v);
-                    if (n == null || n <= 0) return 'Enter a valid amount';
-                    return null;
-                  },
-                ),
                 if (!widget.noteOnly) const SizedBox(height: 14),
                 if (!widget.noteOnly && categories.isNotEmpty) ...[
                   DropdownButtonFormField<String>(
@@ -123,7 +154,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
                             child: Text(category.name),
                           )),
                     ],
-                    onChanged: (value) => setState(() => _categoryId = value?.isEmpty == true ? null : value),
+                    onChanged: (value) => setState(() => _categoryId =
+                        value?.isEmpty == true ? null : value),
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -146,9 +178,18 @@ class _AddItemScreenState extends State<AddItemScreen> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : Text(widget.noteOnly ? 'Save note' : widget.item == null ? 'Save purchase' : 'Save changes'),
+                        : Text(
+                            widget.noteOnly
+                                ? 'Save note'
+                                : widget.item == null
+                                    ? 'Save purchase'
+                                    : 'Save changes',
+                          ),
                   ),
                 ),
               ],

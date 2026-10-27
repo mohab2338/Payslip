@@ -33,6 +33,11 @@ class MonthData {
 
   double get remaining => allowedToSpend - totalSpent;
 
+  double get overspendAmount =>
+      totalSpent > allowedToSpend ? totalSpent - allowedToSpend : 0.0;
+
+  double get actualSaved => salary - totalSpent;
+
   double get spentPercentage {
     if (allowedToSpend <= 0) return 0;
     final pct = (totalSpent / allowedToSpend) * 100;

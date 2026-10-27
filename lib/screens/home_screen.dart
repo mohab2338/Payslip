@@ -466,7 +466,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
 
-              // Salary (filled green) + Saved (white), side by side.
+              // Salary + saving goal, side by side.
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -481,12 +481,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: StatCard(
-                        label: 'Saved',
+                        label: 'Saving goal',
                         value: _currency.format(month.savingGoal),
                       ),
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 10),
+              StatCard(
+                label: 'Actual saved',
+                value: _currency.format(month.actualSaved),
+                valueColor: month.actualSaved < 0
+                    ? AppColors.danger
+                    : AppColors.textPrimary,
+                row: true,
               ),
               const SizedBox(height: 10),
 

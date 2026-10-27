@@ -161,17 +161,51 @@ class AppState extends ChangeNotifier {
 
   Future<void> removeExpenseItem(ExpenseItem item) async {
     if (currentMonth == null) return;
-    await _firestore.removeItem(_uid, currentMonth!.id, item);
-    currentMonth!.items.removeWhere((e) => e.id == item.id);
+    await removeExpenseItemFromMonth(currentMonth!.id, item);
+  }
+
+  Future<void> removeExpenseItemFromMonth(String monthId, ExpenseItem item) async {
+    await _firestore.removeItem(_uid, monthId, item);
+    if (currentMonth != null && currentMonth!.id == monthId) {
+      currentMonth!.items.removeWhere((e) => e.id == item.id);
+    }
     notifyListeners();
   }
 
   Future<void> updateExpenseItem(ExpenseItem item) async {
     if (currentMonth == null) return;
-    await _firestore.updateItem(_uid, currentMonth!.id, item);
-    final index =
-        currentMonth!.items.indexWhere((existing) => existing.id == item.id);
-    if (index >= 0) currentMonth!.items[index] = item;
+    await updateExpenseItemInMonth(currentMonth!.id, item);
+  }
+
+  Future<void> updateExpenseItemInMonth(String monthId, ExpenseItem item) async {
+    await _firestore.updateItem(_uid, monthId, item);
+    if (currentMonth != null && currentMonth!.id == monthId) {
+      final index =
+          currentMonth!.items.indexWhere((existing) => existing.id == item.id);
+      if (index >= 0) currentMonth!.items[index] = item;
+    }
+    notifyListeners();
+  }
+
+  Future<void> addExpenseItemToMonth(
+    String monthId,
+    String title,
+    double amount, {
+    String note = '',
+    String? categoryId,
+  }) async {
+    final item = ExpenseItem(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      title: title,
+      amount: amount,
+      date: DateTime.now(),
+      note: note,
+      categoryId: categoryId,
+    );
+    await _firestore.addItem(_uid, monthId, item);
+    if (currentMonth != null && currentMonth!.id == monthId) {
+      currentMonth!.items.add(item);
+    }
     notifyListeners();
   }
 
@@ -283,6 +317,8 @@ class AppState extends ChangeNotifier {
     await _firestore.upsertMonth(_uid, currentMonth!);
     notifyListeners();
   }
+
+  Stream<MonthData?> watchMonth(String monthId) => _firestore.watchMonth(_uid, monthId);
 
   Stream<List<MonthData>> watchHistory() => _firestore.watchAllMonths(_uid);
 
