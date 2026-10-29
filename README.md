@@ -17,6 +17,7 @@ you can export any past month as a CSV.
   by category
 - Calendar view with purchases grouped by day, scheduled events, and selectable
   day-spending totals
+- Google Calendar invite links for scheduled events
 - Export any month's data (salary, saving goal, items) as a CSV file to share
 
 ---
@@ -130,6 +131,15 @@ does the actual building for you.
    > both `reference_categories` and `reference_goods`; without them, the
    > page will fail with a "permission denied" error.
    > The calendar also needs the `calendar_events` block to save scheduled events.
+
+### Inviting a guest to a scheduled event
+
+Open the event's action menu in the calendar and choose **Invite guest**.
+Enter the guest's email address to open a prefilled Google Calendar event
+with a one-hour duration. Review and save the event in Google Calendar, then
+send the invitation there. This uses a template link; it does not automatically
+create the event or send an invitation from the app. You must be signed in to
+Google Calendar, and guests' reminders follow their own Calendar settings.
 
 ---
 

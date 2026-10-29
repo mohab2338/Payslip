@@ -6,6 +6,7 @@ import '../models/calendar_event.dart';
 import '../models/expense_item.dart';
 import '../models/month_data.dart';
 import '../services/app_state.dart';
+import '../services/google_calendar_invite.dart';
 import '../theme.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -223,6 +224,72 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not delete event: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _inviteGuest(CalendarEvent event) async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final guestEmail = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Invite a guest'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Guest email',
+              hintText: 'name@example.com',
+            ),
+            validator: (value) {
+              final email = value?.trim() ?? '';
+              return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
+                  ? null
+                  : 'Enter a valid email address';
+            },
+            onFieldSubmitted: (_) {
+              if (formKey.currentState?.validate() == true) {
+                Navigator.pop(dialogContext, controller.text.trim());
+              }
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() == true) {
+                Navigator.pop(dialogContext, controller.text.trim());
+              }
+            },
+            child: const Text('Continue to Google Calendar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (guestEmail == null || !mounted) return;
+    try {
+      await launchGoogleCalendarInvite(
+        title: event.title,
+        description: event.description,
+        startTime: event.startAt,
+        endTime: event.startAt.add(const Duration(hours: 1)),
+        guestEmail: guestEmail,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open Google Calendar: $error')),
         );
       }
     }
@@ -640,10 +707,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
             '${event.description.isEmpty ? '' : '\n${event.description}'}',
           ),
           isThreeLine: event.description.isNotEmpty,
-          trailing: IconButton(
-            tooltip: 'Delete event',
-            onPressed: () => _removeEvent(event),
-            icon: const Icon(Icons.delete_outline),
+          trailing: PopupMenuButton<String>(
+            tooltip: 'Event actions',
+            onSelected: (action) {
+              if (action == 'invite') _inviteGuest(event);
+              if (action == 'delete') _removeEvent(event);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'invite',
+                child: ListTile(
+                  leading: Icon(Icons.person_add_alt_1_outlined),
+                  title: Text('Invite guest'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  leading: Icon(Icons.delete_outline),
+                  title: Text('Delete event'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ),
       );
