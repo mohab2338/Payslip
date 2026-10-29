@@ -208,6 +208,13 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
       stream: context.read<AppState>().watchMonth(widget.month.id),
       builder: (context, snapshot) {
         final month = snapshot.data ?? widget.month;
+        final itemsByDay = <DateTime, List<ExpenseItem>>{};
+        for (final item in month.items) {
+          final day = DateUtils.dateOnly(item.date);
+          itemsByDay.putIfAbsent(day, () => []).add(item);
+        }
+        final purchaseDays = itemsByDay.keys.toList()
+          ..sort((a, b) => b.compareTo(a));
         return Scaffold(
           appBar: AppBar(
             title: Text(DateFormat.yMMMd().format(month.periodStart)),
@@ -365,83 +372,120 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                     child: Center(child: Text('No purchases recorded.')),
                   )
                 else
-                  ...month.items.reversed.map((item) => Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
+                  ...purchaseDays.expand((day) {
+                    final dayItems = itemsByDay[day]!
+                      ..sort((a, b) => b.date.compareTo(a.date));
+                    final dayTotal =
+                        dayItems.fold<double>(0, (total, item) => total + item.amount);
+                    return [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
                         child: Row(
                           children: [
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.title,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    DateFormat.yMMMd().add_jm().format(item.date),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  if (item.note.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      item.note,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                              child: Text(
+                                DateFormat.yMMMMEEEEd().format(day),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                             Text(
-                              _currency.format(item.amount),
+                              _currency.format(dayTotal),
                               style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            if (_editing) ...[
-                              const SizedBox(width: 8),
-                              IconButton(
-                                tooltip: 'Edit purchase',
-                                icon: const Icon(Icons.edit_outlined, size: 19),
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => AddItemScreen(
-                                      month: month,
-                                      item: item,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: 'Delete purchase',
-                                icon: const Icon(Icons.delete_outline, size: 19),
-                                onPressed: () => _deleteItem(month, item),
-                              ),
-                            ],
                           ],
                         ),
-                      )),
+                      ),
+                      ...dayItems.map((item) => Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.title,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        DateFormat.yMMMd()
+                                            .add_jm()
+                                            .format(item.date),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      if (item.note.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item.note,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  _currency.format(item.amount),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (_editing) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    tooltip: 'Edit purchase',
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 19),
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AddItemScreen(
+                                          month: month,
+                                          item: item,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Delete purchase',
+                                    icon: const Icon(Icons.delete_outline,
+                                        size: 19),
+                                    onPressed: () => _deleteItem(month, item),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          )),
+                    ];
+                  }),
               ],
             ),
           ),

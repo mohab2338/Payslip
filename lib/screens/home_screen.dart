@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'calendar_screen.dart';
 import '../services/app_state.dart';
 import '../models/expense_item.dart';
 import '../models/spending_category.dart';
@@ -264,6 +265,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (month == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final purchasesByDay = <DateTime, List<ExpenseItem>>{};
+    for (final item in month.items) {
+      final day = DateUtils.dateOnly(item.date);
+      purchasesByDay.putIfAbsent(day, () => []).add(item);
+    }
+    for (final items in purchasesByDay.values) {
+      items.sort((a, b) => b.date.compareTo(a.date));
+    }
+    final purchaseDays = purchasesByDay.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
     final selectedTotal = month.items
         .where((item) => _selectedItemIds.contains(item.id))
         .fold(0.0, (sum, item) => sum + item.amount);
@@ -326,6 +337,14 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SavingsOverviewScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.calendar_month_outlined),
+            tooltip: 'Calendar',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CalendarScreen()),
             ),
           ),
           IconButton(
@@ -648,7 +667,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               else
-                ...month.items.reversed.map((item) => Dismissible(
+                ...purchaseDays.expand((day) => [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                DateFormat.yMMMMEEEEd().format(day),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              _currency.format(
+                                purchasesByDay[day]!.fold<double>(
+                                  0,
+                                  (total, item) => total + item.amount,
+                                ),
+                              ),
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ...purchasesByDay[day]!
+                          .map((item) => Dismissible(
                       key: ValueKey(item.id),
                       direction: DismissDirection.endToStart,
                       confirmDismiss: (_) =>
@@ -761,6 +811,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     )),
+                    ]),
             ],
           ),
         ),

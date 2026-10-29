@@ -15,6 +15,8 @@ you can export any past month as a CSV.
 - Custom cycle start day (e.g. the 25th of each month, not the 1st)
 - Full history of previous cycles, with editable purchases and spending charts
   by category
+- Calendar view with purchases grouped by day, scheduled events, and selectable
+  day-spending totals
 - Export any month's data (salary, saving goal, items) as a CSV file to share
 
 ---
@@ -111,6 +113,10 @@ does the actual building for you.
          match /reference_goods/{goodId} {
            allow read, write: if request.auth != null && request.auth.uid == userId;
          }
+
+         match /calendar_events/{eventId} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+         }
        }
      }
    }
@@ -123,6 +129,7 @@ does the actual building for you.
    > `match /users/{userId}`, and click **Publish**. Goods & prices needs
    > both `reference_categories` and `reference_goods`; without them, the
    > page will fail with a "permission denied" error.
+   > The calendar also needs the `calendar_events` block to save scheduled events.
 
 ---
 

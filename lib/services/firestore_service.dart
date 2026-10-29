@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/calendar_event.dart';
 import '../models/month_data.dart';
 import '../models/expense_item.dart';
 import '../models/external_saving.dart';
@@ -16,6 +17,7 @@ import '../models/reference_good.dart';
 ///   users/{uid}/goals/{goalId}             -> named savings goals and progress
 ///   users/{uid}/reference_categories/{categoryId} -> goods reference categories
 ///   users/{uid}/reference_goods/{goodId}   -> goods and per-shop prices
+///   users/{uid}/calendar_events/{eventId}  -> scheduled calendar events
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -40,6 +42,9 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> _referenceGoodsCol(String uid) =>
       _userDoc(uid).collection('reference_goods');
+
+  CollectionReference<Map<String, dynamic>> _calendarEventsCol(String uid) =>
+      _userDoc(uid).collection('calendar_events');
 
   // ---------- user settings ----------
 
@@ -127,6 +132,25 @@ class FirestoreService {
       items[index] = item.toMap();
       transaction.update(monthRef, {'items': items});
     });
+  }
+
+  // ---------- calendar events ----------
+
+  Stream<List<CalendarEvent>> watchCalendarEvents(String uid) =>
+      _calendarEventsCol(uid).snapshots().map((snap) {
+        final events = snap.docs
+            .map((doc) => CalendarEvent.fromMap(doc.data()))
+            .toList();
+        events.sort((a, b) => a.startAt.compareTo(b.startAt));
+        return events;
+      });
+
+  Future<void> saveCalendarEvent(String uid, CalendarEvent event) async {
+    await _calendarEventsCol(uid).doc(event.id).set(event.toMap());
+  }
+
+  Future<void> removeCalendarEvent(String uid, String eventId) async {
+    await _calendarEventsCol(uid).doc(eventId).delete();
   }
 
   // ---------- external (manually added) savings ----------

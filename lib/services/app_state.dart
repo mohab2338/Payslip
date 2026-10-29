@@ -9,6 +9,7 @@ import '../models/spending_category.dart';
 import '../models/purchase_group.dart';
 import '../models/reference_category.dart';
 import '../models/reference_good.dart';
+import '../models/calendar_event.dart';
 import 'firestore_service.dart';
 import 'cycle_calculator.dart';
 
@@ -321,6 +322,15 @@ class AppState extends ChangeNotifier {
   Stream<MonthData?> watchMonth(String monthId) => _firestore.watchMonth(_uid, monthId);
 
   Stream<List<MonthData>> watchHistory() => _firestore.watchAllMonths(_uid);
+
+  Stream<List<CalendarEvent>> watchCalendarEvents() =>
+      _firestore.watchCalendarEvents(_uid);
+
+  Future<void> saveCalendarEvent(CalendarEvent event) =>
+      _firestore.saveCalendarEvent(_uid, event);
+
+  Future<void> removeCalendarEvent(String eventId) =>
+      _firestore.removeCalendarEvent(_uid, eventId);
 
   // ---------- external (manually added) savings, e.g. gold, cash kept outside the app ----------
 
