@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -286,7 +287,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
               stream: state.watchCalendarEvents(),
               builder: (context, eventSnapshot) {
                 if (eventSnapshot.hasError) {
-                  return const Center(child: Text('Could not load events.'));
+                  final error = eventSnapshot.error;
+                  final permissionDenied = error is FirebaseException &&
+                      error.code == 'permission-denied';
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.event_busy_outlined, size: 40),
+                          const SizedBox(height: 12),
+                          Text(
+                            permissionDenied
+                                ? 'Firestore denied access to calendar events.'
+                                : 'Could not load events: $error',
+                            textAlign: TextAlign.center,
+                          ),
+                          if (permissionDenied) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'In Firebase Console → Firestore Database → Rules, '
+                              'add a calendar_events rule inside '
+                              'match /users/{userId}, then publish the rules.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
                 }
                 if (!eventSnapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
