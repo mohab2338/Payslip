@@ -10,6 +10,8 @@ you can export any past month as a CSV.
 - Email/password sign-up with fingerprint (biometric) unlock afterwards
 - Light, modern UI (Poppins font, soft cards, progress ring)
 - Enter salary + savings target → app shows what you're "allowed to spend"
+- Add extra income during a cycle; it is tracked separately and included in
+  total cycle salary, allowance, and savings calculations
 - Log purchases; see amount spent so far and spent-percentage of your allowance
 - Compare your saving goal with actual savings after all spending
 - Custom cycle start day (e.g. the 25th of each month, not the 1st)
@@ -17,7 +19,6 @@ you can export any past month as a CSV.
   by category
 - Calendar view with purchases grouped by day, scheduled events, and selectable
   day-spending totals
-- Google Calendar invite links for scheduled events
 - Export any month's data (salary, saving goal, items) as a CSV file to share
 
 ---
@@ -30,7 +31,7 @@ salary_tracker/
 │   ├── main.dart              # entry point, auth/lock/setup routing
 │   ├── firebase_options.dart  # PLACEHOLDER — regenerate, see step 3
 │   ├── theme.dart
-│   ├── models/                # ExpenseItem, MonthData
+│   ├── models/                # ExpenseItem, ExtraIncome, MonthData
 │   ├── services/               # Auth, Firestore, biometrics, cycle math, export
 │   ├── widgets/                # SpendRing, StatCard
 │   └── screens/                 # Auth, Setup, Home, AddItem, History, MonthDetail, Settings
@@ -131,15 +132,6 @@ does the actual building for you.
    > both `reference_categories` and `reference_goods`; without them, the
    > page will fail with a "permission denied" error.
    > The calendar also needs the `calendar_events` block to save scheduled events.
-
-### Inviting a guest to a scheduled event
-
-Open the event's action menu in the calendar and choose **Invite guest**.
-Enter the guest's email address to open a prefilled Google Calendar event
-with a one-hour duration. Review and save the event in Google Calendar, then
-send the invitation there. This uses a template link; it does not automatically
-create the event or send an invitation from the app. You must be signed in to
-Google Calendar, and guests' reminders follow their own Calendar settings.
 
 ---
 

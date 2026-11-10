@@ -1,6 +1,7 @@
 import 'expense_item.dart';
 import 'spending_category.dart';
 import 'purchase_group.dart';
+import 'extra_income.dart';
 
 /// Represents one salary cycle (from the user-chosen start day to the day
 /// before the next cycle's start day). The document id in Firestore is
@@ -14,6 +15,7 @@ class MonthData {
   final List<ExpenseItem> items;
   final List<SpendingCategory> categories;
   final List<PurchaseGroup> purchaseGroups;
+  final List<ExtraIncome> extraIncomes;
 
   MonthData({
     required this.id,
@@ -23,20 +25,27 @@ class MonthData {
     List<ExpenseItem>? items,
     List<SpendingCategory>? categories,
     List<PurchaseGroup>? purchaseGroups,
+    List<ExtraIncome>? extraIncomes,
   })  : items = items ?? [],
         categories = categories ?? [],
-        purchaseGroups = purchaseGroups ?? [];
+        purchaseGroups = purchaseGroups ?? [],
+        extraIncomes = extraIncomes ?? [];
 
   double get totalSpent => items.fold(0.0, (sum, e) => sum + e.amount);
 
-  double get allowedToSpend => salary - savingGoal;
+  double get totalExtraIncome =>
+      extraIncomes.fold(0.0, (sum, income) => sum + income.amount);
+
+  double get totalCycleSalary => salary + totalExtraIncome;
+
+  double get allowedToSpend => totalCycleSalary - savingGoal;
 
   double get remaining => allowedToSpend - totalSpent;
 
   double get overspendAmount =>
       totalSpent > allowedToSpend ? totalSpent - allowedToSpend : 0.0;
 
-  double get actualSaved => salary - totalSpent;
+  double get actualSaved => totalCycleSalary - totalSpent;
 
   double get spentPercentage {
     if (allowedToSpend <= 0) return 0;
@@ -53,6 +62,7 @@ class MonthData {
       'items': items.map((e) => e.toMap()).toList(),
       'categories': categories.map((e) => e.toMap()).toList(),
       'purchaseGroups': purchaseGroups.map((e) => e.toMap()).toList(),
+      'extraIncomes': extraIncomes.map((e) => e.toMap()).toList(),
     };
   }
 
@@ -71,6 +81,9 @@ class MonthData {
       purchaseGroups: (map['purchaseGroups'] as List<dynamic>? ?? [])
           .map((e) => PurchaseGroup.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      extraIncomes: (map['extraIncomes'] as List<dynamic>? ?? [])
+          .map((e) => ExtraIncome.fromMap(Map<String, dynamic>.from(e as Map)))
+          .toList(),
     );
   }
 
@@ -80,6 +93,7 @@ class MonthData {
     List<ExpenseItem>? items,
     List<SpendingCategory>? categories,
     List<PurchaseGroup>? purchaseGroups,
+    List<ExtraIncome>? extraIncomes,
   }) {
     return MonthData(
       id: id,
@@ -89,6 +103,7 @@ class MonthData {
       items: items ?? this.items,
       categories: categories ?? this.categories,
       purchaseGroups: purchaseGroups ?? this.purchaseGroups,
+      extraIncomes: extraIncomes ?? this.extraIncomes,
     );
   }
 }

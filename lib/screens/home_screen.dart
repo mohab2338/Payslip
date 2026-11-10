@@ -7,6 +7,7 @@ import '../models/expense_item.dart';
 import '../models/spending_category.dart';
 import '../models/month_data.dart';
 import '../models/purchase_group.dart';
+import '../models/extra_income.dart';
 import '../theme.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/category_spend_chart.dart';
@@ -33,6 +34,208 @@ class _HomeScreenState extends State<HomeScreen> {
       NumberFormat.currency(symbol: 'E£', decimalDigits: 2);
   bool _selectionMode = false;
   final Set<String> _selectedItemIds = {};
+
+  Future<void> _editExtraIncome(
+    BuildContext context,
+    MonthData month, {
+    ExtraIncome? income,
+  }) async {
+    final amountController = TextEditingController(
+      text: income?.amount.toStringAsFixed(2) ?? '',
+    );
+    final descriptionController =
+        TextEditingController(text: income?.description ?? '');
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<(double, String)>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(income == null ? 'Add extra income' : 'Edit extra income'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: amountController,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: 'Amount', prefixText: 'E£ '),
+                validator: (value) {
+                  final amount = double.tryParse(value?.trim() ?? '');
+                  return amount == null || amount <= 0
+                      ? 'Enter a valid amount'
+                      : null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: descriptionController,
+                textCapitalization: TextCapitalization.sentences,
+                minLines: 1,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() != true) return;
+              Navigator.pop(
+                dialogContext,
+                (
+                  double.parse(amountController.text.trim()),
+                  descriptionController.text.trim(),
+                ),
+              );
+            },
+            child: Text(income == null ? 'Add extra' : 'Save changes'),
+          ),
+        ],
+      ),
+    );
+    amountController.dispose();
+    descriptionController.dispose();
+
+    if (result == null || !context.mounted) return;
+    final updatedIncome = ExtraIncome(
+      id: income?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      amount: result.$1,
+      date: income?.date ?? DateTime.now(),
+      description: result.$2,
+    );
+    try {
+      await context.read<AppState>().saveExtraIncome(month.id, updatedIncome);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save extra income: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteExtraIncome(
+      BuildContext context, MonthData month, ExtraIncome income) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete extra income?'),
+        content: Text('Remove ${_currency.format(income.amount)} from this cycle?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await context.read<AppState>().removeExtraIncome(month.id, income.id);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not delete extra income: $error')),
+        );
+      }
+    }
+  }
+
+  Widget _extraIncomeCard(BuildContext context, MonthData month) {
+    final incomes = [...month.extraIncomes]
+      ..sort((a, b) => b.date.compareTo(a.date));
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: ExpansionTile(
+        leading: const Icon(Icons.add_card_outlined, color: AppColors.accent),
+        title: const Text('Extra income',
+            style: TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          'Total cycle salary: ${_currency.format(month.totalCycleSalary)}',
+          style: const TextStyle(fontSize: 12),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _currency.format(month.totalExtraIncome),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const Icon(Icons.expand_more),
+          ],
+        ),
+        children: [
+          if (incomes.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'No extra income added this cycle.',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12),
+                ),
+              ),
+            ),
+          for (final income in incomes)
+            ListTile(
+              dense: true,
+              title: Text(_currency.format(income.amount)),
+              subtitle: Text(
+                [
+                  DateFormat.yMMMd().format(income.date),
+                  if (income.description.isNotEmpty) income.description,
+                ].join(' · '),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Edit extra income',
+                    onPressed: () =>
+                        _editExtraIncome(context, month, income: income),
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete extra income',
+                    onPressed: () => _deleteExtraIncome(context, month, income),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _editExtraIncome(context, month),
+                icon: const Icon(Icons.add),
+                label: const Text('Add extra income'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   static const _categoryPalettes = [
     (Color(0xFF7B1E3A), Color(0xFFF3D7DF), Color(0xFFE58AA8)),
@@ -493,7 +696,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: StatCard(
-                        label: 'Salary',
+                        label: 'Base salary',
                         value: _currency.format(month.salary),
                         fillColor: AppColors.accent,
                       ),
@@ -511,6 +714,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 10),
+              _extraIncomeCard(context, month),
               const SizedBox(height: 10),
               StatCard(
                 label: 'Actual saved',

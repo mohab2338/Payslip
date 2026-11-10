@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/expense_item.dart';
+import '../models/extra_income.dart';
 import '../models/month_data.dart';
 import '../services/app_state.dart';
 import '../services/export_service.dart';
@@ -69,6 +70,127 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
   Future<void> _deleteItem(MonthData month, ExpenseItem item) async {
     if (await confirmDelete(context, itemLabel: item.title)) {
       await context.read<AppState>().removeExpenseItemFromMonth(month.id, item);
+    }
+  }
+
+  Future<void> _editExtraIncome(
+    MonthData month, {
+    ExtraIncome? income,
+  }) async {
+    final amountController = TextEditingController(
+      text: income?.amount.toStringAsFixed(2) ?? '',
+    );
+    final descriptionController =
+        TextEditingController(text: income?.description ?? '');
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<(double, String)>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(income == null ? 'Add extra income' : 'Edit extra income'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: amountController,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: 'Amount', prefixText: 'E£ '),
+                validator: (value) {
+                  final amount = double.tryParse(value?.trim() ?? '');
+                  return amount == null || amount <= 0
+                      ? 'Enter a valid amount'
+                      : null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: descriptionController,
+                textCapitalization: TextCapitalization.sentences,
+                minLines: 1,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() != true) return;
+              Navigator.pop(
+                dialogContext,
+                (
+                  double.parse(amountController.text.trim()),
+                  descriptionController.text.trim(),
+                ),
+              );
+            },
+            child: Text(income == null ? 'Add extra' : 'Save changes'),
+          ),
+        ],
+      ),
+    );
+    amountController.dispose();
+    descriptionController.dispose();
+    if (result == null || !mounted) return;
+
+    try {
+      await context.read<AppState>().saveExtraIncome(
+            month.id,
+            ExtraIncome(
+              id: income?.id ??
+                  DateTime.now().microsecondsSinceEpoch.toString(),
+              amount: result.$1,
+              date: income?.date ?? DateTime.now(),
+              description: result.$2,
+            ),
+          );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save extra income: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteExtraIncome(MonthData month, ExtraIncome income) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete extra income?'),
+        content: Text('Remove ${_currency.format(income.amount)} from this cycle?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await context.read<AppState>().removeExtraIncome(month.id, income.id);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not delete extra income: $error')),
+        );
+      }
     }
   }
 
@@ -221,7 +343,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
             actions: [
               IconButton(
                 icon: Icon(_editing ? Icons.done : Icons.edit_note_outlined),
-                tooltip: _editing ? 'Finish editing' : 'Edit purchases',
+                tooltip: _editing ? 'Finish editing' : 'Edit cycle items',
                 onPressed: () => setState(() => _editing = !_editing),
               ),
               IconButton(
@@ -309,7 +431,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                     children: [
                       Expanded(
                         child: StatCard(
-                          label: 'Salary',
+                          label: 'Base salary',
                           value: _currency.format(month.salary),
                           fillColor: AppColors.accent,
                         ),
@@ -327,6 +449,8 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 10),
+                _buildExtraIncome(month),
                 const SizedBox(height: 10),
                 IntrinsicHeight(
                   child: Row(
@@ -491,6 +615,87 @@ class _MonthDetailScreenState extends State<MonthDetailScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildExtraIncome(MonthData month) {
+    final incomes = [...month.extraIncomes]
+      ..sort((a, b) => b.date.compareTo(a.date));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Extra income',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              Text(
+                _currency.format(month.totalExtraIncome),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Total cycle salary: ${_currency.format(month.totalCycleSalary)}',
+            style: const TextStyle(
+                color: AppColors.textSecondary, fontSize: 12),
+          ),
+          if (incomes.isNotEmpty) ...[
+            const Divider(height: 20),
+            for (final income in incomes)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text(_currency.format(income.amount)),
+                subtitle: Text(
+                  [
+                    DateFormat.yMMMd().format(income.date),
+                    if (income.description.isNotEmpty) income.description,
+                  ].join(' · '),
+                ),
+                trailing: _editing
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Edit extra income',
+                            onPressed: () =>
+                                _editExtraIncome(month, income: income),
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete extra income',
+                            onPressed: () =>
+                                _deleteExtraIncome(month, income),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+          ],
+          if (_editing)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _editExtraIncome(month),
+                icon: const Icon(Icons.add),
+                label: const Text('Add extra income'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

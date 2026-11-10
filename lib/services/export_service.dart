@@ -9,7 +9,9 @@ class ExportService {
     final rows = <List<dynamic>>[
       ['Our Life Export'],
       ['Period start', dateFmt.format(month.periodStart)],
-      ['Salary', month.salary],
+      ['Base salary', month.salary],
+      ['Extra income', month.totalExtraIncome],
+      ['Total cycle salary', month.totalCycleSalary],
       ['Saving goal', month.savingGoal],
       ['Allowed to spend', month.allowedToSpend],
       ['Total spent', month.totalSpent],
@@ -18,6 +20,14 @@ class ExportService {
       [],
       ['Item', 'Amount', 'Date'],
       ...month.items.map((e) => [e.title, e.amount, dateFmt.format(e.date)]),
+      [],
+      ['Extra income', 'Amount', 'Date', 'Description'],
+      ...month.extraIncomes.map((income) => [
+            'Extra income',
+            income.amount,
+            dateFmt.format(income.date),
+            income.description,
+          ]),
     ];
     return const ListToCsvConverter().convert(rows);
   }

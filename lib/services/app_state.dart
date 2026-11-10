@@ -10,6 +10,7 @@ import '../models/purchase_group.dart';
 import '../models/reference_category.dart';
 import '../models/reference_good.dart';
 import '../models/calendar_event.dart';
+import '../models/extra_income.dart';
 import 'firestore_service.dart';
 import 'cycle_calculator.dart';
 
@@ -137,6 +138,44 @@ class AppState extends ChangeNotifier {
     currentMonth =
         currentMonth!.copyWith(salary: salary, savingGoal: savingGoal);
     await _firestore.upsertMonth(_uid, currentMonth!);
+    notifyListeners();
+  }
+
+  Future<void> saveExtraIncome(String monthId, ExtraIncome income) async {
+    final month = await _monthForUpdate(monthId);
+    final incomes = [
+      ...month.extraIncomes.where((entry) => entry.id != income.id),
+      income,
+    ]..sort((a, b) => a.date.compareTo(b.date));
+    final updatedMonth = month.copyWith(extraIncomes: incomes);
+    await _firestore.upsertMonth(_uid, updatedMonth);
+    _updateCachedMonth(updatedMonth);
+  }
+
+  Future<void> removeExtraIncome(String monthId, String incomeId) async {
+    final month = await _monthForUpdate(monthId);
+    final updatedMonth = month.copyWith(
+      extraIncomes:
+          month.extraIncomes.where((income) => income.id != incomeId).toList(),
+    );
+    await _firestore.upsertMonth(_uid, updatedMonth);
+    _updateCachedMonth(updatedMonth);
+  }
+
+  Future<MonthData> _monthForUpdate(String monthId) async {
+    final month = currentMonth?.id == monthId
+        ? currentMonth!
+        : await _firestore.getMonth(_uid, monthId);
+    if (month == null) {
+      throw StateError('Could not find cycle $monthId.');
+    }
+    return month;
+  }
+
+  void _updateCachedMonth(MonthData updatedMonth) {
+    if (currentMonth?.id == updatedMonth.id) {
+      currentMonth = updatedMonth;
+    }
     notifyListeners();
   }
 

@@ -171,7 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextField(
               controller: _salaryCtrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Salary', prefixText: 'E£ '),
+              decoration: const InputDecoration(labelText: 'Base salary', prefixText: 'E£ '),
             ),
             const SizedBox(height: 12),
             TextField(
